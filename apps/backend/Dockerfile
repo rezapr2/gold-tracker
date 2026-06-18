@@ -4,8 +4,8 @@ WORKDIR /app
 # Install dependencies only when needed
 FROM base AS deps
 COPY package.json package-lock.json* ./
-RUN npm ci --only=production && cp -R node_modules prod_node_modules
-RUN npm ci
+RUN npm ci --omit=dev --legacy-peer-deps && cp -R node_modules prod_node_modules
+RUN npm ci --legacy-peer-deps
 
 FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
