@@ -1,4 +1,4 @@
-import { Injectable, Logger, OnModuleInit, Optional } from '@nestjs/common';
+import { Injectable, Logger, OnApplicationBootstrap, Optional } from '@nestjs/common';
 import { Cron, SchedulerRegistry } from '@nestjs/schedule';
 import { CronTime } from 'cron';
 import { GoldPriceService } from '../gold-price/gold-price.service';
@@ -10,7 +10,7 @@ import { SettingsStoreService } from '../settings/settings-store.service';
 import { Metal, METALS } from '../gold-price/metal.types';
 
 @Injectable()
-export class SchedulerService implements OnModuleInit {
+export class SchedulerService implements OnApplicationBootstrap {
   private readonly logger = new Logger(SchedulerService.name);
   // Fallback when Redis isn't available (single-instance / dev).
   private readonly localAlertPrice = new Map<Metal, number>();
@@ -25,7 +25,9 @@ export class SchedulerService implements OnModuleInit {
     @Optional() private readonly redis?: RedisService,
   ) {}
 
-  async onModuleInit() {
+  // Run after every module's onModuleInit so @nestjs/schedule has finished
+  // registering the @Cron jobs; otherwise getCronJob() can't find them yet.
+  async onApplicationBootstrap() {
     await this.applySchedule();
   }
 
