@@ -26,6 +26,10 @@ export default () => ({
   },
 
   apis: {
+    // Free, keyless metals API — used first so quota-limited providers are backups.
+    goldApiCom: {
+      baseUrl: process.env.GOLD_API_COM_URL || 'https://api.gold-api.com',
+    },
     goldapi: {
       key: process.env.GOLDAPI_KEY || '',
       baseUrl: 'https://www.goldapi.io/api',

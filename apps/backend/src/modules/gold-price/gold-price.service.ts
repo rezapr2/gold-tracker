@@ -2,6 +2,7 @@ import { Injectable, Logger, Optional } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { GoldPrice, GoldPriceDocument } from './schemas/gold-price.schema';
+import { GoldApiComProvider } from './providers/gold-api-com.provider';
 import { GoldApiProvider, GoldPriceData } from './providers/goldapi.provider';
 import { MetalsDevProvider } from './providers/metals-dev.provider';
 import { TwelveDataProvider } from './providers/twelve-data.provider';
@@ -16,6 +17,7 @@ export class GoldPriceService {
 
   constructor(
     @InjectModel(GoldPrice.name) private goldPriceModel: Model<GoldPriceDocument>,
+    private goldApiComProvider: GoldApiComProvider,
     private goldApiProvider: GoldApiProvider,
     private metalsDevProvider: MetalsDevProvider,
     private twelveDataProvider: TwelveDataProvider,
@@ -27,6 +29,7 @@ export class GoldPriceService {
     // Only try providers that declare support for this asset (see the registry's
     // per-asset `providers` list), so e.g. a metals-only API is never asked for oil.
     const providers = [
+      this.goldApiComProvider,
       this.goldApiProvider,
       this.metalsDevProvider,
       this.twelveDataProvider,
