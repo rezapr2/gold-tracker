@@ -113,7 +113,7 @@ NEXT_PUBLIC_WS_URL=http://localhost:3001
 
 ### Live Gold Price Fetching
 - Fetches XAU/USD every minute via configurable cron job
-- Multi-provider fallback chain: GoldAPI → Metals.dev → TwelveData → AlphaVantage
+- Multi-provider fallback chain: gold-api.com (free, keyless) → GoldAPI → Metals.dev → TwelveData → AlphaVantage
 - Deduplication prevents duplicate price entries
 - Graceful error handling — continues on provider failure
 
@@ -234,6 +234,8 @@ ping / pong    Connectivity check
 
 ## Production Deployment (Ubuntu)
 
+> 📖 **Full step-by-step install & update guide:** [DEPLOY.md](DEPLOY.md) — covers the root `.env`, TLS, the full-stack vs backend-only stacks, updates, backups, and troubleshooting. Quick version below.
+
 ```bash
 # Install Docker
 curl -fsSL https://get.docker.com | sh
@@ -258,8 +260,8 @@ docker-compose logs -f backend
 
 ```bash
 sudo apt install certbot
-certbot certonly --standalone -d yourdomain.com
-# Then update docker/nginx/default.conf to add SSL config
+certbot certonly --standalone -d aprice.online
+# default.conf is already wired for aprice.online + /etc/letsencrypt
 ```
 
 ## Testing
