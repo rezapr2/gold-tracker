@@ -20,13 +20,7 @@ function build(channels: any[]) {
     countDocuments: jest.fn(),
   };
   const config = {
-    get: (k: string) =>
-      ({
-        'telegram.channelId': '@env-gold',
-        'telegram.sendCharts': false, // skip image rendering in this test
-        'telegram.commandsEnabled': false,
-        frontendUrl: 'https://app.test',
-      } as Record<string, any>)[k],
+    get: (k: string) => ({ frontendUrl: 'https://app.test' } as Record<string, any>)[k],
   } as unknown as ConfigService;
   const goldPriceService: any = {
     getPriceStats: jest.fn().mockResolvedValue(stats),
@@ -35,6 +29,13 @@ function build(channels: any[]) {
   };
   const chartImageService: any = { generateGoldChart: jest.fn() };
   const channelService: any = { listEnabled: jest.fn().mockResolvedValue(channels) };
+  // Telegram token/channel, chart and command toggles now resolve through the
+  // settings store rather than ConfigService.
+  const settings: any = {
+    telegram: jest.fn(async () => ({ token: 'tok', channelId: '@env-gold' })),
+    sendCharts: jest.fn(async () => false), // skip image rendering in this test
+    commandsEnabled: jest.fn(async () => false),
+  };
 
   const service = new TelegramService(
     publishLogModel,
@@ -42,6 +43,7 @@ function build(channels: any[]) {
     goldPriceService,
     chartImageService,
     channelService,
+    settings,
   );
   return { service, publishLogModel, created };
 }

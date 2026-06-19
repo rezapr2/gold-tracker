@@ -15,7 +15,7 @@ interface MetalPanelProps {
 
 /** Full single-metal view: price card, 24h movement, stats and interactive chart. */
 export function MetalPanel({ metal }: MetalPanelProps) {
-  const { price, stats, loading, refetch } = useLatestPrice(metal);
+  const { stats, loading, refetch } = useLatestPrice(metal);
   const { history, loading: historyLoading } = usePriceHistory(24, 200, metal);
   const { records, loading: recordsLoading } = useRecords(metal);
   const meta = METAL_META[metal];

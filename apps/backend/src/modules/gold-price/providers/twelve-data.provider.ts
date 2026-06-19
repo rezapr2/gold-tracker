@@ -1,17 +1,26 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
-import { GoldPriceData } from './goldapi.provider';
-import { Metal, DEFAULT_METAL } from '../metal.types';
+import { GoldPriceData, PriceProvider } from './price-provider.interface';
+import { Asset, DEFAULT_ASSET, getAsset, symbolFor } from '../asset.types';
+import { SettingsStoreService } from '../../settings/settings-store.service';
 
 @Injectable()
-export class TwelveDataProvider {
+export class TwelveDataProvider implements PriceProvider {
+  readonly name = 'twelvedata';
   private readonly logger = new Logger(TwelveDataProvider.name);
 
-  constructor(private configService: ConfigService) {}
+  constructor(
+    private configService: ConfigService,
+    private settings: SettingsStoreService,
+  ) {}
 
-  async fetchPrice(metal: Metal = DEFAULT_METAL): Promise<GoldPriceData | null> {
-    const apiKey = this.configService.get<string>('apis.twelveData.key');
+  supports(asset: Asset): boolean {
+    return getAsset(asset).providers.includes(this.name);
+  }
+
+  async fetchPrice(asset: Asset = DEFAULT_ASSET): Promise<GoldPriceData | null> {
+    const apiKey = await this.settings.apiKey('twelveData');
     const baseUrl = this.configService.get<string>('apis.twelveData.baseUrl');
 
     if (!apiKey) {
@@ -22,7 +31,7 @@ export class TwelveDataProvider {
     try {
       const response = await axios.get(`${baseUrl}/price`, {
         params: {
-          symbol: `${metal}/USD`,
+          symbol: symbolFor(asset, this.name),
           apikey: apiKey,
         },
         timeout: 10000,
@@ -35,7 +44,7 @@ export class TwelveDataProvider {
       return {
         price: parseFloat(data.price),
         currency: 'USD',
-        metal,
+        metal: asset,
         provider: 'twelvedata',
         timestamp: new Date(),
       };
@@ -46,15 +55,15 @@ export class TwelveDataProvider {
   }
 
   /**
-   * Fetches historical OHLC candles for XAU/USD in a single call. Used for the
+   * Fetches historical OHLC candles for an asset in a single call. Used for the
    * one-time history backfill. Returns oldest-first, or null on failure.
    */
   async fetchHistory(
     interval = '1day',
     outputsize = 5000,
-    metal: Metal = DEFAULT_METAL,
+    asset: Asset = DEFAULT_ASSET,
   ): Promise<GoldPriceData[] | null> {
-    const apiKey = this.configService.get<string>('apis.twelveData.key');
+    const apiKey = await this.settings.apiKey('twelveData');
     const baseUrl = this.configService.get<string>('apis.twelveData.baseUrl');
 
     if (!apiKey) {
@@ -65,7 +74,7 @@ export class TwelveDataProvider {
     try {
       const response = await axios.get(`${baseUrl}/time_series`, {
         params: {
-          symbol: `${metal}/USD`,
+          symbol: symbolFor(asset, this.name),
           interval,
           outputsize,
           order: 'ASC',
@@ -90,7 +99,7 @@ export class TwelveDataProvider {
           high: parseFloat(v.high),
           low: parseFloat(v.low),
           currency: 'USD',
-          metal,
+          metal: asset,
           provider: 'twelvedata',
           timestamp: new Date(v.datetime),
           changeAmount: close - open,

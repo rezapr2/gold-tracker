@@ -184,10 +184,19 @@ export function GoldChart({ metal = DEFAULT_METAL }: GoldChartProps) {
         </div>
       </div>
 
-      <div className="relative">
+      <div className="relative min-h-[380px]">
         {loading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-card/80 backdrop-blur-sm z-10">
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-card/80 backdrop-blur-sm z-10">
             <div className="w-6 h-6 rounded-full border-2 border-gold-500 border-t-transparent animate-spin" />
+            <p className="text-xs text-muted-foreground">Loading {meta.symbol} chart…</p>
+          </div>
+        )}
+        {!loading && data.length === 0 && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 z-10">
+            <p className="text-sm font-medium text-foreground">No chart data yet</p>
+            <p className="text-xs text-muted-foreground">
+              Try a different timeframe — data appears as prices are collected.
+            </p>
           </div>
         )}
         <div ref={containerRef} className="w-full" />

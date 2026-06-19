@@ -1,17 +1,26 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
-import { GoldPriceData } from './goldapi.provider';
-import { Metal, DEFAULT_METAL } from '../metal.types';
+import { GoldPriceData, PriceProvider } from './price-provider.interface';
+import { Asset, DEFAULT_ASSET, getAsset } from '../asset.types';
+import { SettingsStoreService } from '../../settings/settings-store.service';
 
 @Injectable()
-export class AlphaVantageProvider {
+export class AlphaVantageProvider implements PriceProvider {
+  readonly name = 'alphavantage';
   private readonly logger = new Logger(AlphaVantageProvider.name);
 
-  constructor(private configService: ConfigService) {}
+  constructor(
+    private configService: ConfigService,
+    private settings: SettingsStoreService,
+  ) {}
 
-  async fetchPrice(metal: Metal = DEFAULT_METAL): Promise<GoldPriceData | null> {
-    const apiKey = this.configService.get<string>('apis.alphaVantage.key');
+  supports(asset: Asset): boolean {
+    return getAsset(asset).providers.includes(this.name);
+  }
+
+  async fetchPrice(asset: Asset = DEFAULT_ASSET): Promise<GoldPriceData | null> {
+    const apiKey = await this.settings.apiKey('alphaVantage');
     const baseUrl = this.configService.get<string>('apis.alphaVantage.baseUrl');
 
     if (!apiKey) {
@@ -23,7 +32,7 @@ export class AlphaVantageProvider {
       const response = await axios.get(baseUrl, {
         params: {
           function: 'CURRENCY_EXCHANGE_RATE',
-          from_currency: metal,
+          from_currency: getAsset(asset).code,
           to_currency: 'USD',
           apikey: apiKey,
         },
@@ -39,7 +48,7 @@ export class AlphaVantageProvider {
         buyPrice: parseFloat(data['8. Bid Price']),
         sellPrice: parseFloat(data['9. Ask Price']),
         currency: 'USD',
-        metal,
+        metal: asset,
         provider: 'alphavantage',
         timestamp: new Date(data['6. Last Refreshed']),
       };

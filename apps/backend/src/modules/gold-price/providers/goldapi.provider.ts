@@ -1,31 +1,30 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
-import { Metal, DEFAULT_METAL } from '../metal.types';
+import { Asset, DEFAULT_ASSET, getAsset } from '../asset.types';
+import { GoldPriceData, PriceProvider } from './price-provider.interface';
+import { SettingsStoreService } from '../../settings/settings-store.service';
 
-export interface GoldPriceData {
-  price: number;
-  buyPrice?: number;
-  sellPrice?: number;
-  high?: number;
-  low?: number;
-  open?: number;
-  currency: string;
-  metal: string;
-  provider: string;
-  timestamp: Date;
-  changePercent?: number;
-  changeAmount?: number;
-}
+// Re-export so existing `import { GoldPriceData } from './goldapi.provider'`
+// callers keep working; the canonical definition lives in the interface file.
+export { GoldPriceData };
 
 @Injectable()
-export class GoldApiProvider {
+export class GoldApiProvider implements PriceProvider {
+  readonly name = 'goldapi';
   private readonly logger = new Logger(GoldApiProvider.name);
 
-  constructor(private configService: ConfigService) {}
+  constructor(
+    private configService: ConfigService,
+    private settings: SettingsStoreService,
+  ) {}
 
-  async fetchPrice(metal: Metal = DEFAULT_METAL): Promise<GoldPriceData | null> {
-    const apiKey = this.configService.get<string>('apis.goldapi.key');
+  supports(asset: Asset): boolean {
+    return getAsset(asset).providers.includes(this.name);
+  }
+
+  async fetchPrice(asset: Asset = DEFAULT_ASSET): Promise<GoldPriceData | null> {
+    const apiKey = await this.settings.apiKey('goldapi');
     const baseUrl = this.configService.get<string>('apis.goldapi.baseUrl');
 
     if (!apiKey) {
@@ -33,8 +32,10 @@ export class GoldApiProvider {
       return null;
     }
 
+    const code = getAsset(asset).code;
+
     try {
-      const response = await axios.get(`${baseUrl}/${metal}/USD`, {
+      const response = await axios.get(`${baseUrl}/${code}/USD`, {
         headers: {
           'x-access-token': apiKey,
           'Content-Type': 'application/json',
@@ -52,7 +53,7 @@ export class GoldApiProvider {
         low: data.low_price,
         open: data.open_price,
         currency: data.currency || 'USD',
-        metal: data.metal || metal,
+        metal: data.metal || code,
         provider: 'goldapi',
         timestamp: new Date(data.timestamp * 1000),
         // GoldAPI: `ch` is the absolute change, `chp` is the percent change.

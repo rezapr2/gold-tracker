@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation';
 import {
   BarChart3,
   Bot,
+  Globe,
   Home,
   LogOut,
   Settings,
@@ -13,25 +14,31 @@ import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/auth.store';
 
 const navItems = [
-  { href: '/dashboard', icon: Home, label: 'Dashboard' },
-  { href: '/dashboard/analytics', icon: BarChart3, label: 'Analytics' },
-  { href: '/dashboard/telegram', icon: Bot, label: 'Telegram' },
-  { href: '/dashboard/settings', icon: Settings, label: 'Settings' },
+  { href: '/admin', icon: Home, label: 'Dashboard' },
+  { href: '/admin/analytics', icon: BarChart3, label: 'Analytics' },
+  { href: '/admin/telegram', icon: Bot, label: 'Telegram' },
+  { href: '/admin/settings', icon: Settings, label: 'Settings' },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  className?: string;
+  /** Called after a nav item is clicked — used to close the mobile drawer. */
+  onNavigate?: () => void;
+}
+
+export function Sidebar({ className, onNavigate }: SidebarProps) {
   const pathname = usePathname();
   const { logout } = useAuthStore();
 
   return (
-    <aside className="flex flex-col w-64 min-h-screen bg-card border-r border-border">
+    <aside className={cn('flex flex-col w-64 min-h-screen bg-card border-r border-border', className)}>
       <div className="flex items-center gap-3 px-6 py-5 border-b border-border">
         <div className="w-9 h-9 rounded-xl bg-gold-500/10 border border-gold-500/20 flex items-center justify-center">
           <TrendingUp className="w-5 h-5 text-gold-400" />
         </div>
         <div>
           <p className="font-bold text-foreground text-sm">Gold Tracker</p>
-          <p className="text-xs text-muted-foreground">XAU/USD Live</p>
+          <p className="text-xs text-muted-foreground">Live markets</p>
         </div>
       </div>
 
@@ -42,6 +49,7 @@ export function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
+              onClick={onNavigate}
               className={cn(
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all',
                 isActive
@@ -56,7 +64,15 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className="px-3 pb-4">
+      <div className="px-3 pb-4 space-y-1">
+        <Link
+          href="/"
+          onClick={onNavigate}
+          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-all w-full"
+        >
+          <Globe className="w-4 h-4 shrink-0" />
+          View Public Site
+        </Link>
         <button
           onClick={logout}
           className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all w-full"

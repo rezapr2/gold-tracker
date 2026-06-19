@@ -1,5 +1,11 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
+import { Document, Schema as MongooseSchema } from 'mongoose';
+
+/** Per-asset Telegram bot override, keyed by asset code (e.g. XAU, XAG). */
+export interface TelegramBotOverride {
+  token?: string;
+  channelId?: string;
+}
 
 export type BotSettingsDocument = BotSettings & Document;
 
@@ -8,11 +14,16 @@ export class BotSettings {
   @Prop({ required: true, unique: true, default: 'default' })
   key: string;
 
-  @Prop({ type: String })
-  telegramBotToken: string;
+  // Per-asset bot token + channel, keyed by asset code. Empty/missing entries
+  // fall back to the asset's env vars (see asset registry `telegram`).
+  @Prop({ type: MongooseSchema.Types.Mixed, default: {} })
+  telegramBots: Record<string, TelegramBotOverride>;
 
-  @Prop({ type: String })
-  telegramChannelId: string;
+  @Prop({ default: true })
+  telegramSendCharts: boolean;
+
+  @Prop({ default: false })
+  telegramCommandsEnabled: boolean;
 
   @Prop({ default: '*/1 * * * *' })
   priceFetchInterval: string;

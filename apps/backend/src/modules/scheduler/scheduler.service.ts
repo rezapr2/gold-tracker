@@ -1,17 +1,16 @@
-import { Injectable, Logger, Optional } from '@nestjs/common';
-import { Cron, CronExpression, SchedulerRegistry } from '@nestjs/schedule';
-import { ConfigService } from '@nestjs/config';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Injectable, Logger, OnModuleInit, Optional } from '@nestjs/common';
+import { Cron, SchedulerRegistry } from '@nestjs/schedule';
+import { CronTime } from 'cron';
 import { GoldPriceService } from '../gold-price/gold-price.service';
 import { TelegramService } from '../telegram/telegram.service';
 import { AnalyticsService } from '../analytics/analytics.service';
 import { WebsocketGateway } from '../websocket/websocket.gateway';
 import { RedisService } from '../redis/redis.service';
+import { SettingsStoreService } from '../settings/settings-store.service';
 import { Metal, METALS } from '../gold-price/metal.types';
 
 @Injectable()
-export class SchedulerService {
+export class SchedulerService implements OnModuleInit {
   private readonly logger = new Logger(SchedulerService.name);
   // Fallback when Redis isn't available (single-instance / dev).
   private readonly localAlertPrice = new Map<Metal, number>();
@@ -21,9 +20,35 @@ export class SchedulerService {
     private telegramService: TelegramService,
     private analyticsService: AnalyticsService,
     private websocketGateway: WebsocketGateway,
-    private configService: ConfigService,
+    private settings: SettingsStoreService,
+    private schedulerRegistry: SchedulerRegistry,
     @Optional() private readonly redis?: RedisService,
   ) {}
+
+  async onModuleInit() {
+    await this.applySchedule();
+  }
+
+  /**
+   * Applies admin-configured cron intervals to the running jobs so a saved
+   * change takes effect without a restart. Called on boot and after each save.
+   */
+  async applySchedule(): Promise<void> {
+    this.reschedule('fetchGoldPrice', await this.settings.priceFetchInterval());
+  }
+
+  private reschedule(name: string, cronExpr: string): void {
+    if (!cronExpr) return;
+    try {
+      const job = this.schedulerRegistry.getCronJob(name);
+      job.stop();
+      job.setTime(new CronTime(cronExpr));
+      job.start();
+      this.logger.log(`Cron '${name}' scheduled at '${cronExpr}'`);
+    } catch (error) {
+      this.logger.warn(`Failed to reschedule cron '${name}': ${error.message}`);
+    }
+  }
 
   @Cron('*/1 * * * *', { name: 'fetchGoldPrice' })
   async fetchGoldPrice() {
@@ -92,7 +117,7 @@ export class SchedulerService {
   @Cron('0 3 * * *', { name: 'cleanOldData' })
   async cleanOldData() {
     try {
-      const retentionDays = this.configService.get<number>('dataRetentionDays') || 90;
+      const retentionDays = await this.settings.dataRetentionDays();
       await this.goldPriceService.cleanOldData(retentionDays);
     } catch (error) {
       this.logger.error(`Data cleanup cron failed: ${error.message}`);
@@ -106,7 +131,7 @@ export class SchedulerService {
       return;
     }
 
-    const threshold = this.configService.get<number>('alerts.priceChangeThreshold') || 1.5;
+    const threshold = await this.settings.alertThreshold();
     const changePercent = ((currentPrice - baseline) / baseline) * 100;
 
     if (Math.abs(changePercent) >= threshold) {

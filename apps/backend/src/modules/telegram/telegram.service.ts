@@ -9,6 +9,7 @@ import { ChartImageService } from './chart-image.service';
 import { TelegramChannelService } from './telegram-channel.service';
 import { buildTemplateContext, renderTemplate } from './message-template';
 import { Metal, METALS, DEFAULT_METAL, METAL_NAMES, METAL_EMOJIS } from '../gold-price/metal.types';
+import { SettingsStoreService } from '../settings/settings-store.service';
 import { format } from 'date-fns';
 
 interface ChannelTarget {
@@ -34,39 +35,47 @@ export class TelegramService implements OnModuleInit {
     private goldPriceService: GoldPriceService,
     private chartImageService: ChartImageService,
     private channelService: TelegramChannelService,
+    private settings: SettingsStoreService,
   ) {}
 
-  onModuleInit() {
+  async onModuleInit() {
+    await this.reinitializeBots();
+  }
+
+  /** Re-initialises every metal's bot from current settings (admin save / boot). */
+  async reinitializeBots(): Promise<void> {
     for (const metal of METALS) {
-      this.initializeBot(metal);
+      await this.initializeBot(metal);
     }
   }
 
-  private metalConfig(metal: Metal): { token?: string; channelId?: string } {
-    if (metal === 'XAG') {
-      return {
-        token: this.configService.get<string>('telegram.silverBotToken'),
-        channelId: this.configService.get<string>('telegram.silverChannelId'),
-      };
-    }
-    return {
-      token: this.configService.get<string>('telegram.botToken'),
-      channelId: this.configService.get<string>('telegram.channelId'),
-    };
+  private metalConfig(metal: Metal): Promise<{ token?: string; channelId?: string }> {
+    return this.settings.telegram(metal);
   }
 
-  private commandsEnabled(): boolean {
-    return this.configService.get<boolean>('telegram.commandsEnabled') === true;
+  private commandsEnabled(): Promise<boolean> {
+    return this.settings.commandsEnabled();
   }
 
-  private chartsEnabled(): boolean {
-    return this.configService.get<boolean>('telegram.sendCharts') !== false;
+  private chartsEnabled(): Promise<boolean> {
+    return this.settings.sendCharts();
   }
 
-  /** (Re)initialises the bot for a given metal. Token defaults to config. */
-  initializeBot(metal: Metal = DEFAULT_METAL, token?: string) {
-    const botToken = token || this.metalConfig(metal).token;
+  /** (Re)initialises the bot for a given metal. Token defaults to settings. */
+  async initializeBot(metal: Metal = DEFAULT_METAL, token?: string) {
+    const botToken = token || (await this.metalConfig(metal)).token;
     const name = METAL_NAMES[metal];
+
+    // Stop any running bot first, so disabling a token actually tears it down.
+    const existing = this.bots.get(metal);
+    if (existing) {
+      try {
+        await existing.stopPolling();
+      } catch {
+        /* ignore */
+      }
+      this.bots.delete(metal);
+    }
 
     if (!botToken) {
       this.logger.warn(`${name} Telegram bot token not configured`);
@@ -74,10 +83,7 @@ export class TelegramService implements OnModuleInit {
     }
 
     try {
-      const existing = this.bots.get(metal);
-      if (existing) existing.stopPolling();
-
-      const polling = this.commandsEnabled();
+      const polling = await this.commandsEnabled();
       const bot = new TelegramBot(botToken, { polling });
       if (polling) this.registerCommands(bot);
 
@@ -137,7 +143,7 @@ export class TelegramService implements OnModuleInit {
   private async resolveTargets(metal: Metal): Promise<ChannelTarget[]> {
     const byId = new Map<string, ChannelTarget>();
 
-    const envChannel = this.metalConfig(metal).channelId;
+    const envChannel = (await this.metalConfig(metal)).channelId;
     if (envChannel) byId.set(envChannel, { channelId: envChannel });
 
     const dbChannels = await this.channelService.listEnabled(metal);
@@ -208,7 +214,7 @@ export class TelegramService implements OnModuleInit {
     }
 
     // Build the chart at most once and reuse it across channels that want it.
-    const globalCharts = this.chartsEnabled();
+    const globalCharts = await this.chartsEnabled();
     const anyChart = targets.some((t) => t.sendCharts ?? globalCharts);
     const image = anyChart ? await this.buildTrendImage(metal, chartTitle, changePercent) : undefined;
 
@@ -395,7 +401,7 @@ ${weekEmoji} <b>7D Change:</b> ${week?.changePercent >= 0 ? '+' : ''}${week?.cha
 
     return {
       isEnabled: this.bots.size > 0,
-      commandsEnabled: this.commandsEnabled(),
+      commandsEnabled: await this.commandsEnabled(),
       bots,
       lastPublish: lastPublish?.createdAt,
       totalSent,

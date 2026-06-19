@@ -10,6 +10,7 @@ import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { TelegramModule } from './modules/telegram/telegram.module';
 import { SchedulerModule } from './modules/scheduler/scheduler.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { SettingsStoreModule } from './modules/settings/settings-store.module';
 import { SettingsModule } from './modules/settings/settings.module';
 import { WebsocketModule } from './modules/websocket/websocket.module';
 import { HealthModule } from './modules/health/health.module';
@@ -29,6 +30,10 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
         uri: config.get<string>('mongodb.uri'),
         retryWrites: true,
         w: 'majority',
+        // Don't (re)build indexes from the schema on every prod boot — indexes
+        // are provisioned by docker/mongo/init.js there. Kept on in dev so local
+        // schema changes are reflected without re-seeding the database.
+        autoIndex: config.get<string>('nodeEnv') !== 'production',
       }),
     }),
     ThrottlerModule.forRoot([
@@ -38,6 +43,8 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
       },
     ]),
     RedisModule,
+    // Global: must be registered before modules that resolve runtime config.
+    SettingsStoreModule,
     GoldPriceModule,
     AnalyticsModule,
     TelegramModule,

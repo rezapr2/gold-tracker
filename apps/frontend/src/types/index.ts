@@ -90,9 +90,16 @@ export interface TelegramChannelConfig {
   sendCharts?: boolean;
 }
 
+export interface TelegramBotOverride {
+  token?: string;
+  channelId?: string;
+}
+
 export interface BotSettings {
-  telegramBotToken: string;
-  telegramChannelId: string;
+  /** Per-asset bot token + channel, keyed by asset code (e.g. XAU, XAG). */
+  telegramBots: Record<string, TelegramBotOverride>;
+  telegramSendCharts: boolean;
+  telegramCommandsEnabled: boolean;
   priceFetchInterval: string;
   telegramPublishInterval: string;
   priceAlertThreshold: number;

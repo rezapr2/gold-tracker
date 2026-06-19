@@ -1,53 +1,33 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { goldPriceApi } from '@/lib/api';
-import { GoldPrice, PriceStats } from '@/types';
+import { GoldPrice } from '@/types';
 import { Metal, DEFAULT_METAL } from '@/lib/metals';
 import { getSocket } from '@/lib/socket';
+import {
+  getPriceSnapshot,
+  getServerPriceSnapshot,
+  refetchPrice,
+  subscribePrice,
+} from '@/lib/priceStore';
 
+/**
+ * Live stats for a metal. Consumers render `stats` (which carries the current
+ * price plus day/week high/low/change), so we fetch only /prices/stats — never
+ * the redundant /prices/latest. All subscribers for the same metal share one
+ * request, poll and socket listener via the price store, so mounting the ticker
+ * and a panel for the same metal no longer doubles the network traffic.
+ */
 export function useLatestPrice(metal: Metal = DEFAULT_METAL) {
-  const [price, setPrice] = useState<GoldPrice | null>(null);
-  const [stats, setStats] = useState<PriceStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const subscribe = useCallback((cb: () => void) => subscribePrice(metal, cb), [metal]);
+  const snapshot = useSyncExternalStore(
+    subscribe,
+    () => getPriceSnapshot(metal),
+    getServerPriceSnapshot,
+  );
+  const refetch = useCallback(() => refetchPrice(metal), [metal]);
 
-  const fetchData = useCallback(async () => {
-    try {
-      const [priceRes, statsRes] = await Promise.all([
-        goldPriceApi.getLatest(metal) as any,
-        goldPriceApi.getStats(metal) as any,
-      ]);
-      setPrice(priceRes.data);
-      setStats(statsRes.data);
-      setError(null);
-    } catch (err: any) {
-      setError(err.message || 'Failed to fetch price');
-    } finally {
-      setLoading(false);
-    }
-  }, [metal]);
-
-  useEffect(() => {
-    fetchData();
-
-    const socket = getSocket();
-    const handler = (newPrice: GoldPrice) => {
-      // The gateway broadcasts updates for every metal; only react to ours.
-      if (newPrice?.metal && newPrice.metal !== metal) return;
-      setPrice(newPrice);
-      fetchData();
-    };
-    socket.on('price:update', handler);
-
-    const interval = setInterval(fetchData, 30000);
-
-    return () => {
-      socket.off('price:update', handler);
-      clearInterval(interval);
-    };
-  }, [fetchData, metal]);
-
-  return { price, stats, loading, error, refetch: fetchData };
+  return { stats: snapshot.stats, loading: snapshot.loading, error: snapshot.error, refetch };
 }
 
 export function usePriceHistory(hours = 24, limit = 500, metal: Metal = DEFAULT_METAL) {

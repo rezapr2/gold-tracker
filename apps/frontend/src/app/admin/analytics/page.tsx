@@ -60,7 +60,7 @@ export default function AnalyticsPage() {
         <Header title="Analytics" />
         <div className="p-6 grid grid-cols-1 gap-5">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-64 bg-card border border-border rounded-2xl animate-pulse" />
+            <div key={i} className="skeleton h-64 rounded-2xl border border-border" />
           ))}
         </div>
       </div>

@@ -6,7 +6,7 @@ import { telegramApi } from '@/lib/api';
 import { TelegramStatus, PublishLog } from '@/types';
 import { format } from 'date-fns';
 import { cn, formatPrice, formatPercent } from '@/lib/utils';
-import { Send, CheckCircle, XCircle, Clock, Bot, RefreshCw, BarChart3 } from 'lucide-react';
+import { Send, CheckCircle, XCircle, Clock, Bot, RefreshCw, BarChart3, History } from 'lucide-react';
 
 export default function TelegramPage() {
   const [status, setStatus] = useState<TelegramStatus | null>(null);
@@ -81,50 +81,73 @@ export default function TelegramPage() {
 
       <div className="p-6 space-y-6">
         {/* Bot status */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-card border border-border rounded-2xl p-5">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
-                <Bot className="w-4 h-4 text-blue-400" />
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="skeleton h-[104px] rounded-2xl border border-border" />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="bg-card border border-border rounded-2xl p-5 transition-colors hover:border-gold-500/30">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+                  <Bot className="w-4 h-4 text-blue-400" />
+                </div>
+                <p className="text-sm font-medium text-muted-foreground">Bot Status</p>
               </div>
-              <p className="text-sm font-medium text-muted-foreground">Bot Status</p>
+              <div className="flex items-center gap-2">
+                <div
+                  className={cn(
+                    'w-2 h-2 rounded-full',
+                    status?.isEnabled ? 'bg-emerald-500 animate-pulse' : 'bg-red-500',
+                  )}
+                />
+                <span className="text-sm font-semibold text-foreground">
+                  {status?.isEnabled ? 'Active' : 'Inactive'}
+                </span>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <div
-                className={cn(
-                  'w-2 h-2 rounded-full',
-                  status?.isEnabled ? 'bg-emerald-500 animate-pulse' : 'bg-red-500',
-                )}
-              />
-              <span className="text-sm font-semibold text-foreground">
-                {status?.isEnabled ? 'Active' : 'Inactive'}
-              </span>
+
+            <div className="bg-card border border-border rounded-2xl p-5 transition-colors hover:border-gold-500/30">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-9 h-9 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
+                  <Clock className="w-4 h-4 text-purple-400" />
+                </div>
+                <p className="text-sm font-medium text-muted-foreground">Last Published</p>
+              </div>
+              <p className="text-sm font-semibold text-foreground tabular-nums">
+                {status?.lastPublish
+                  ? format(new Date(status.lastPublish), 'MMM dd, HH:mm')
+                  : 'Never'}
+              </p>
+            </div>
+
+            <div className="bg-card border border-border rounded-2xl p-5 transition-colors hover:border-gold-500/30">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                  <CheckCircle className="w-4 h-4 text-emerald-400" />
+                </div>
+                <p className="text-sm font-medium text-muted-foreground">Total Sent</p>
+              </div>
+              <p className="text-2xl font-bold text-emerald-500 tabular-nums">
+                {status?.totalSent?.toLocaleString() ?? '—'}
+              </p>
+            </div>
+
+            <div className="bg-card border border-border rounded-2xl p-5 transition-colors hover:border-gold-500/30">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-9 h-9 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
+                  <XCircle className="w-4 h-4 text-red-400" />
+                </div>
+                <p className="text-sm font-medium text-muted-foreground">Failed</p>
+              </div>
+              <p className="text-2xl font-bold text-red-500 tabular-nums">
+                {status?.totalFailed?.toLocaleString() ?? '—'}
+              </p>
             </div>
           </div>
-
-          <div className="bg-card border border-border rounded-2xl p-5">
-            <p className="text-xs text-muted-foreground mb-2">Last Published</p>
-            <p className="text-sm font-semibold text-foreground">
-              {status?.lastPublish
-                ? format(new Date(status.lastPublish), 'MMM dd, HH:mm')
-                : 'Never'}
-            </p>
-          </div>
-
-          <div className="bg-card border border-border rounded-2xl p-5">
-            <p className="text-xs text-muted-foreground mb-2">Total Sent</p>
-            <p className="text-2xl font-bold text-emerald-500">
-              {status?.totalSent?.toLocaleString() ?? '—'}
-            </p>
-          </div>
-
-          <div className="bg-card border border-border rounded-2xl p-5">
-            <p className="text-xs text-muted-foreground mb-2">Failed</p>
-            <p className="text-2xl font-bold text-red-500">
-              {status?.totalFailed?.toLocaleString() ?? '—'}
-            </p>
-          </div>
-        </div>
+        )}
 
         {/* Manual send actions */}
         <div className="bg-card border border-border rounded-2xl p-5">
@@ -192,7 +215,10 @@ export default function TelegramPage() {
         {/* Publish logs */}
         <div className="bg-card border border-border rounded-2xl overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-            <p className="text-sm font-semibold text-foreground">Publish History</p>
+            <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
+              <History className="w-4 h-4 text-muted-foreground" />
+              Publish History
+            </p>
             <button
               onClick={fetchData}
               className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
@@ -205,7 +231,7 @@ export default function TelegramPage() {
           {loading ? (
             <div className="p-5 space-y-3">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="h-12 bg-muted rounded-xl animate-pulse" />
+                <div key={i} className="skeleton h-12 rounded-xl" />
               ))}
             </div>
           ) : logs.length === 0 ? (

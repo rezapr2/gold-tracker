@@ -1,16 +1,23 @@
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import { GoldApiProvider } from './goldapi.provider';
+import { SettingsStoreService } from '../../settings/settings-store.service';
 
 jest.mock('axios');
 const mockedAxios = axios as jest.Mocked<typeof axios>;
+
+const storeWithKey = (key?: string) =>
+  ({ apiKey: async () => key ?? '' }) as unknown as SettingsStoreService;
 
 describe('GoldApiProvider', () => {
   const config: Record<string, any> = {
     'apis.goldapi.key': 'test-key',
     'apis.goldapi.baseUrl': 'https://www.goldapi.io/api',
   };
-  const provider = new GoldApiProvider({ get: (k: string) => config[k] } as ConfigService);
+  const provider = new GoldApiProvider(
+    { get: (k: string) => config[k] } as ConfigService,
+    storeWithKey('test-key'),
+  );
 
   afterEach(() => jest.clearAllMocks());
 
@@ -48,7 +55,7 @@ describe('GoldApiProvider', () => {
   });
 
   it('returns null without an API key', async () => {
-    const noKey = new GoldApiProvider({ get: () => undefined } as unknown as ConfigService);
+    const noKey = new GoldApiProvider({ get: () => undefined } as unknown as ConfigService, storeWithKey());
     expect(await noKey.fetchPrice()).toBeNull();
     expect(mockedAxios.get).not.toHaveBeenCalled();
   });

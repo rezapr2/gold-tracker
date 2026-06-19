@@ -26,7 +26,9 @@ export class GoldPrice {
   @Prop({ default: 'USD' })
   currency: string;
 
-  @Prop({ default: 'XAU', index: true })
+  // No single-field index here: metal is always queried together with a time
+  // range and is served by the { metal: 1, timestamp: -1 } compound below.
+  @Prop({ default: 'XAU' })
   metal: string;
 
   @Prop({ required: true })
@@ -38,7 +40,9 @@ export class GoldPrice {
   @Prop({ type: Number })
   changeAmount: number;
 
-  @Prop({ required: true, index: true })
+  // Indexed via the explicit { timestamp: -1 } index below (a single-field
+  // index serves both sort directions), so no prop-level index is needed.
+  @Prop({ required: true })
   timestamp: Date;
 
   @Prop({ default: false })

@@ -1,19 +1,30 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
-import { GoldPriceData } from './goldapi.provider';
-import { Metal, DEFAULT_METAL } from '../metal.types';
+import { GoldPriceData, PriceProvider } from './price-provider.interface';
+import { Asset, DEFAULT_ASSET, getAsset } from '../asset.types';
+import { SettingsStoreService } from '../../settings/settings-store.service';
 
-const METALS_DEV_KEYS: Record<Metal, string> = { XAU: 'gold', XAG: 'silver' };
+// Metals.dev's per-metal slug. A new metal needs an entry here; non-metals are
+// declared to skip this provider via the registry's `providers` list.
+const METALS_DEV_KEYS: Record<string, string> = { XAU: 'gold', XAG: 'silver' };
 
 @Injectable()
-export class MetalsDevProvider {
+export class MetalsDevProvider implements PriceProvider {
+  readonly name = 'metalsdev';
   private readonly logger = new Logger(MetalsDevProvider.name);
 
-  constructor(private configService: ConfigService) {}
+  constructor(
+    private configService: ConfigService,
+    private settings: SettingsStoreService,
+  ) {}
 
-  async fetchPrice(metal: Metal = DEFAULT_METAL): Promise<GoldPriceData | null> {
-    const apiKey = this.configService.get<string>('apis.metalsDev.key');
+  supports(asset: Asset): boolean {
+    return getAsset(asset).providers.includes(this.name) && asset in METALS_DEV_KEYS;
+  }
+
+  async fetchPrice(asset: Asset = DEFAULT_ASSET): Promise<GoldPriceData | null> {
+    const apiKey = await this.settings.apiKey('metalsDev');
     const baseUrl = this.configService.get<string>('apis.metalsDev.baseUrl');
 
     if (!apiKey) {
@@ -21,7 +32,8 @@ export class MetalsDevProvider {
       return null;
     }
 
-    const metalKey = METALS_DEV_KEYS[metal];
+    const metalKey = METALS_DEV_KEYS[asset];
+    if (!metalKey) return null;
 
     try {
       const response = await axios.get(`${baseUrl}/latest`, {
@@ -42,7 +54,7 @@ export class MetalsDevProvider {
       return {
         price,
         currency: data.currency || 'USD',
-        metal,
+        metal: asset,
         provider: 'metals.dev',
         timestamp: new Date(),
       };

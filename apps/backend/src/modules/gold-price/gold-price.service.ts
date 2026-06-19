@@ -24,12 +24,19 @@ export class GoldPriceService {
   ) {}
 
   async fetchAndSavePrice(metal: Metal = DEFAULT_METAL): Promise<GoldPrice | null> {
+    // Only try providers that declare support for this asset (see the registry's
+    // per-asset `providers` list), so e.g. a metals-only API is never asked for oil.
     const providers = [
       this.goldApiProvider,
       this.metalsDevProvider,
       this.twelveDataProvider,
       this.alphaVantageProvider,
-    ];
+    ].filter((p) => p.supports(metal));
+
+    if (providers.length === 0) {
+      this.logger.error(`No price provider supports ${metal}`);
+      return null;
+    }
 
     let priceData: GoldPriceData | null = null;
 

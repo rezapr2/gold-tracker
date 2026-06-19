@@ -7,8 +7,9 @@ import { Toaster } from '@/components/ui/toaster';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Gold Tracker — Live XAU/USD Dashboard',
-  description: 'Real-time gold price tracking, analytics, and Telegram alerts',
+  title: 'Gold Tracker — Live Market Prices & Charts',
+  description:
+    'Real-time prices, charts and analytics for gold, silver and more assets, with Telegram alerts.',
 };
 
 export default function RootLayout({

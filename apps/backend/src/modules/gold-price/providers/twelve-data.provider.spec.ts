@@ -1,16 +1,23 @@
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import { TwelveDataProvider } from './twelve-data.provider';
+import { SettingsStoreService } from '../../settings/settings-store.service';
 
 jest.mock('axios');
 const mockedAxios = axios as jest.Mocked<typeof axios>;
+
+const storeWithKey = (key?: string) =>
+  ({ apiKey: async () => key ?? '' }) as unknown as SettingsStoreService;
 
 describe('TwelveDataProvider', () => {
   const config: Record<string, any> = {
     'apis.twelveData.key': 'test-key',
     'apis.twelveData.baseUrl': 'https://api.twelvedata.com',
   };
-  const provider = new TwelveDataProvider({ get: (k: string) => config[k] } as ConfigService);
+  const provider = new TwelveDataProvider(
+    { get: (k: string) => config[k] } as ConfigService,
+    storeWithKey('test-key'),
+  );
 
   afterEach(() => jest.clearAllMocks());
 
@@ -36,7 +43,7 @@ describe('TwelveDataProvider', () => {
     });
 
     it('returns null without an API key', async () => {
-      const noKey = new TwelveDataProvider({ get: () => undefined } as unknown as ConfigService);
+      const noKey = new TwelveDataProvider({ get: () => undefined } as unknown as ConfigService, storeWithKey());
       expect(await noKey.fetchHistory()).toBeNull();
       expect(mockedAxios.get).not.toHaveBeenCalled();
     });

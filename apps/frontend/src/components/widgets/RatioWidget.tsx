@@ -8,13 +8,14 @@ export function RatioWidget() {
   const { ratio, loading } = useGoldSilverRatio();
 
   if (loading || !ratio) {
-    return <div className="h-[72px] bg-card border border-border rounded-2xl animate-pulse" />;
+    return <div className="skeleton h-[88px] rounded-2xl border border-border" />;
   }
 
   return (
-    <div className="bg-card border border-border rounded-2xl p-5 flex items-center justify-between">
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-gold-500/10 flex items-center justify-center">
+    <div className="relative overflow-hidden bg-card border border-border rounded-2xl p-5 flex items-center justify-between transition-colors hover:border-gold-500/30">
+      <div className="absolute inset-0 bg-gradient-to-r from-gold-500/5 via-transparent to-slate-400/5 pointer-events-none" />
+      <div className="relative flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl bg-gold-500/10 border border-gold-500/20 flex items-center justify-center">
           <Scale className="w-5 h-5 text-gold-400" />
         </div>
         <div>
@@ -27,11 +28,11 @@ export function RatioWidget() {
         </div>
       </div>
 
-      <div className="text-right">
-        <p className="text-3xl font-bold text-foreground tracking-tight">
+      <div className="relative text-right">
+        <p className="text-3xl font-bold text-foreground tracking-tight tabular-nums">
           {ratio.ratio.toFixed(1)}
         </p>
-        <p className="text-xs text-muted-foreground mt-0.5">
+        <p className="text-xs text-muted-foreground mt-0.5 tabular-nums">
           🥇 ${formatPrice(ratio.gold)} · 🥈 ${formatPrice(ratio.silver)}
         </p>
       </div>

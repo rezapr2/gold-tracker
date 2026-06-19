@@ -1,15 +1,13 @@
 import { Module } from '@nestjs/common';
-import { MongooseModule } from '@nestjs/mongoose';
 import { SettingsController } from './settings.controller';
 import { SettingsService } from './settings.service';
-import { BotSettings, BotSettingsSchema } from './schemas/settings.schema';
 import { TelegramModule } from '../telegram/telegram.module';
+import { SchedulerModule } from '../scheduler/scheduler.module';
 
 @Module({
-  imports: [
-    MongooseModule.forFeature([{ name: BotSettings.name, schema: BotSettingsSchema }]),
-    TelegramModule,
-  ],
+  // BotSettings model + SettingsStoreService come from the global
+  // SettingsStoreModule registered in AppModule.
+  imports: [TelegramModule, SchedulerModule],
   controllers: [SettingsController],
   providers: [SettingsService],
   exports: [SettingsService],

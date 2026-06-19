@@ -1,4 +1,3 @@
-import { ConfigService } from '@nestjs/config';
 import { SchedulerService } from './scheduler.service';
 
 describe('SchedulerService.checkPriceAlert', () => {
@@ -7,13 +6,16 @@ describe('SchedulerService.checkPriceAlert', () => {
 
   const build = (threshold = 1.5) => {
     telegram = { isReady: jest.fn(() => true), sendAlert: jest.fn() };
-    const config = { get: jest.fn(() => threshold) } as unknown as ConfigService;
+    // The alert threshold now comes from the settings store, not ConfigService.
+    const settings = { alertThreshold: jest.fn(async () => threshold) };
     service = new SchedulerService(
       {} as any, // goldPriceService
       telegram as any,
       {} as any, // analyticsService
       {} as any, // websocketGateway
-      config,
+      settings as any, // settings store
+      {} as any, // schedulerRegistry
+      // redis omitted (optional) → baselines fall back to the in-memory map
     );
   };
 

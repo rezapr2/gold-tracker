@@ -11,6 +11,8 @@ services:
       MONGO_INITDB_DATABASE: gold-tracker
     volumes:
       - mongo_data:/data/db
+      # Provisions indexes on a fresh volume; prod runs with autoIndex disabled.
+      - ./docker/mongo/init.js:/docker-entrypoint-initdb.d/init.js:ro
     networks:
       - gold-network
     healthcheck:

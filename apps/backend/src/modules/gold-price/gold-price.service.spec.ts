@@ -29,10 +29,13 @@ const mockGoldPriceModel = {
   bulkWrite: jest.fn(),
 };
 
-const mockGoldApiProvider = { fetchPrice: jest.fn() };
-const mockMetalsDevProvider = { fetchPrice: jest.fn() };
-const mockTwelveDataProvider = { fetchPrice: jest.fn(), fetchHistory: jest.fn() };
-const mockAlphaVantageProvider = { fetchPrice: jest.fn() };
+// Each provider now declares which assets it supports; default to "supports
+// everything" so the existing fetch flow is exercised (clearAllMocks keeps this
+// inline implementation between tests).
+const mockGoldApiProvider = { fetchPrice: jest.fn(), supports: jest.fn(() => true) };
+const mockMetalsDevProvider = { fetchPrice: jest.fn(), supports: jest.fn(() => true) };
+const mockTwelveDataProvider = { fetchPrice: jest.fn(), fetchHistory: jest.fn(), supports: jest.fn(() => true) };
+const mockAlphaVantageProvider = { fetchPrice: jest.fn(), supports: jest.fn(() => true) };
 
 describe('GoldPriceService', () => {
   let service: GoldPriceService;

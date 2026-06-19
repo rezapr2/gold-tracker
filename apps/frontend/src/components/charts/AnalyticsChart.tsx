@@ -37,9 +37,15 @@ export function AnalyticsChart({ data, loading, metal = DEFAULT_METAL }: Analyti
   const isDark = theme === 'dark';
   const { chartColor, gradientId } = METAL_META[metal];
 
-  if (loading || !data.length) {
+  if (loading) {
+    return <div className="skeleton h-48 rounded-2xl border border-border" />;
+  }
+
+  if (!data.length) {
     return (
-      <div className="h-48 bg-card border border-border rounded-2xl animate-pulse" />
+      <div className="h-48 flex items-center justify-center rounded-2xl border border-dashed border-border">
+        <p className="text-xs text-muted-foreground">No recent data to plot</p>
+      </div>
     );
   }
 
