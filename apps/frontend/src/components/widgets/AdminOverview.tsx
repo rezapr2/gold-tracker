@@ -96,7 +96,7 @@ function TelegramKpi() {
         />
         <p className="text-2xl font-bold text-foreground">{active ? 'Active' : 'Idle'}</p>
       </div>
-      <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground tabular-nums">
+      <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground tabular-nums">
         <span className="flex items-center gap-1">
           <Send className="w-3 h-3 text-emerald-500" />
           {status?.totalSent?.toLocaleString() ?? '—'}

@@ -25,18 +25,18 @@ export function PublicHeader() {
   }, []);
 
   return (
-    <header className="flex items-center justify-between px-6 py-4 border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-      <Link href="/" className="flex items-center gap-3">
-        <div className="w-9 h-9 rounded-xl bg-gold-500/10 border border-gold-500/20 flex items-center justify-center">
+    <header className="flex items-center justify-between gap-3 px-4 sm:px-6 py-3 sm:py-4 border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+      <Link href="/" className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+        <div className="w-9 h-9 shrink-0 rounded-xl bg-gold-500/10 border border-gold-500/20 flex items-center justify-center">
           <TrendingUp className="w-5 h-5 text-gold-400" />
         </div>
-        <div>
-          <p className="font-bold text-foreground text-sm">Gold Tracker</p>
-          <p className="text-xs text-muted-foreground">Live market prices</p>
+        <div className="min-w-0">
+          <p className="font-bold text-foreground text-sm truncate">Gold Tracker</p>
+          <p className="text-xs text-muted-foreground truncate">Live market prices</p>
         </div>
       </Link>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3 shrink-0">
         <div
           className={cn(
             'flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border',
@@ -46,7 +46,7 @@ export function PublicHeader() {
           )}
         >
           {connected ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
-          {connected ? 'Live' : 'Offline'}
+          <span className="hidden xs:inline">{connected ? 'Live' : 'Offline'}</span>
         </div>
 
         {mounted && (

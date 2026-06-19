@@ -104,7 +104,7 @@ export default function SettingsPage() {
     return (
       <div className="flex flex-col flex-1">
         <Header title="Settings" />
-        <div className="p-6 max-w-2xl space-y-6">
+        <div className="p-4 sm:p-6 max-w-2xl space-y-6">
           {[1, 2, 3].map((i) => (
             <div key={i} className="skeleton h-40 rounded-2xl border border-border" />
           ))}
@@ -117,7 +117,7 @@ export default function SettingsPage() {
     <div className="flex flex-col flex-1 overflow-auto">
       <Header title="Settings" />
 
-      <div className="p-6">
+      <div className="p-4 sm:p-6">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 max-w-2xl pb-20">
           {message && (
             <div
@@ -277,7 +277,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Sticky save bar */}
-      <div className="sticky bottom-0 border-t border-border bg-card/80 backdrop-blur-sm px-6 py-3">
+      <div className="sticky bottom-0 border-t border-border bg-card/80 backdrop-blur-sm px-4 sm:px-6 py-3">
         <div className="max-w-2xl flex items-center justify-between gap-4">
           <p className="text-xs text-muted-foreground hidden sm:block">
             Changes apply after saving.

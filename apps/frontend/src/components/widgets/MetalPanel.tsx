@@ -40,15 +40,15 @@ export function MetalPanel({ metal }: MetalPanelProps) {
 
       <PriceCard stats={stats} loading={loading} onRefresh={refetch} metal={metal} />
 
-      <div className="bg-card border border-border rounded-2xl p-5">
-        <div className="flex items-center justify-between mb-4">
+      <div className="bg-card border border-border rounded-2xl p-4 sm:p-5">
+        <div className="flex items-center justify-between gap-3 mb-4">
           <p className="text-sm font-semibold text-foreground">24H Price Movement</p>
-          <span className="text-xs text-muted-foreground">{history.length} data points</span>
+          <span className="text-xs text-muted-foreground shrink-0">{history.length} data points</span>
         </div>
         <AnalyticsChart data={history} loading={historyLoading} metal={metal} />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
         <StatsWidget
           title="Current Price"
           value={`$${formatPrice(stats?.current ?? 0)}`}

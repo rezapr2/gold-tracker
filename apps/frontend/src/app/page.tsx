@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { ArrowRight, LineChart, Radio } from 'lucide-react';
 import { PublicHeader } from '@/components/layout/PublicHeader';
 import { MarketTicker } from '@/components/widgets/MarketTicker';
-import { MetalPanel } from '@/components/widgets/MetalPanel';
+import { AssetPriceCard } from '@/components/widgets/AssetPriceCard';
 import { RatioWidget } from '@/components/widgets/RatioWidget';
 import { ASSETS, SHOW_GOLD_SILVER_RATIO } from '@/lib/assets';
 
@@ -19,7 +19,7 @@ export default function HomePage() {
         <div className="absolute inset-0 bg-grid opacity-40 [mask-image:radial-gradient(ellipse_at_center,black,transparent_75%)]" />
         <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-[42rem] h-[42rem] max-w-full rounded-full bg-gold-500/10 blur-3xl animate-glow-pulse pointer-events-none" />
 
-        <div className="relative max-w-7xl mx-auto px-6 py-16 sm:py-20 text-center">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-14 sm:py-20 text-center">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-gold-500/30 bg-gold-500/10 text-gold-400 text-xs font-medium mb-6 animate-fade-in-up">
             <Radio className="w-3.5 h-3.5" />
             Live market data · updated every few seconds
@@ -64,29 +64,30 @@ export default function HomePage() {
         </div>
       </section>
 
-      <main id="prices" className="max-w-7xl mx-auto px-6 py-10 space-y-6 scroll-mt-20">
+      <main id="prices" className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-10 space-y-6 scroll-mt-20">
         {SHOW_GOLD_SILVER_RATIO && (
           <div className="animate-fade-in-up" style={{ animationDelay: '80ms' }}>
             <RatioWidget />
           </div>
         )}
 
-        {/* Each tracked asset gets its own panel (stacks on smaller screens). */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        {/* Each tracked asset gets a live price tile that links to its full
+            detail page (charts, stats and history). */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
           {ASSETS.map((asset, i) => (
             <div
               key={asset}
               className="animate-fade-in-up"
               style={{ animationDelay: `${160 + i * 80}ms` }}
             >
-              <MetalPanel metal={asset} />
+              <AssetPriceCard asset={asset} />
             </div>
           ))}
         </div>
       </main>
 
       <footer className="border-t border-border mt-10">
-        <div className="max-w-7xl mx-auto px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-muted-foreground">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-muted-foreground text-center sm:text-left">
           <p>Gold Tracker · Live market price tracking</p>
           <p>Prices are indicative and for informational purposes only.</p>
         </div>

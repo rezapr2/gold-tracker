@@ -79,16 +79,16 @@ export default function TelegramPage() {
     <div className="flex flex-col flex-1 overflow-auto">
       <Header title="Telegram Bot" />
 
-      <div className="p-6 space-y-6">
+      <div className="p-4 sm:p-6 space-y-6">
         {/* Bot status */}
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
             {[1, 2, 3, 4].map((i) => (
               <div key={i} className="skeleton h-[104px] rounded-2xl border border-border" />
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
             <div className="bg-card border border-border rounded-2xl p-5 transition-colors hover:border-gold-500/30">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
@@ -242,7 +242,7 @@ export default function TelegramPage() {
                 <div key={log._id} className="flex items-center gap-3 px-5 py-3 hover:bg-secondary/30 transition-colors">
                   {statusIcons[log.status]}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
                       <span className="text-xs font-medium text-foreground">
                         {typeLabels[log.type]}
                       </span>

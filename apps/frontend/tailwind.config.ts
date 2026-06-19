@@ -9,6 +9,11 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      // Extra-small breakpoint for fine-grained phone layout tweaks
+      // (default Tailwind starts at sm: 640px).
+      screens: {
+        xs: '400px',
+      },
       colors: {
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',

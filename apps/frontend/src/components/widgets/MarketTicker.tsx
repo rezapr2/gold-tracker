@@ -65,7 +65,7 @@ function TickerItem({ asset }: { asset: AssetId }) {
 export function MarketTicker() {
   return (
     <div className="border-b border-border bg-card/40 backdrop-blur-sm">
-      <div className="max-w-7xl mx-auto flex items-center gap-6 overflow-x-auto px-6 py-2.5 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+      <div className="max-w-7xl mx-auto flex items-center gap-4 sm:gap-6 overflow-x-auto px-4 sm:px-6 py-2.5 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
         <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground whitespace-nowrap shrink-0">
           <span className="relative flex h-2 w-2">
             <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75 animate-ping" />

@@ -58,7 +58,7 @@ export default function AnalyticsPage() {
     return (
       <div className="flex flex-col flex-1">
         <Header title="Analytics" />
-        <div className="p-6 grid grid-cols-1 gap-5">
+        <div className="p-4 sm:p-6 grid grid-cols-1 gap-5">
           {[1, 2, 3].map((i) => (
             <div key={i} className="skeleton h-64 rounded-2xl border border-border" />
           ))}
@@ -71,7 +71,7 @@ export default function AnalyticsPage() {
     <div className="flex flex-col flex-1 overflow-auto">
       <Header title="Analytics" />
 
-      <div className="p-6 space-y-6">
+      <div className="p-4 sm:p-6 space-y-6">
         {/* Summary cards */}
         {summary && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

@@ -38,7 +38,7 @@ export function PriceCard({ stats, loading, onRefresh, metal = DEFAULT_ASSET }: 
 
   if (loading || !stats) {
     return (
-      <div className="bg-card border border-border rounded-2xl p-6">
+      <div className="bg-card border border-border rounded-2xl p-5 sm:p-6">
         <div className="skeleton h-4 rounded w-24 mb-4" />
         <div className="skeleton h-10 rounded w-48 mb-3" />
         <div className="skeleton h-4 rounded w-32" />
@@ -47,12 +47,12 @@ export function PriceCard({ stats, loading, onRefresh, metal = DEFAULT_ASSET }: 
   }
 
   return (
-    <div className="bg-card border border-border rounded-2xl p-6 relative overflow-hidden transition-colors hover:border-gold-500/30">
+    <div className="bg-card border border-border rounded-2xl p-5 sm:p-6 relative overflow-hidden transition-colors hover:border-gold-500/30">
       <div className="absolute inset-0 bg-gradient-to-br from-gold-500/5 to-transparent pointer-events-none" />
 
       <div className="relative">
-        <div className="flex items-start justify-between mb-4">
-          <div>
+        <div className="flex items-start justify-between gap-3 mb-4">
+          <div className="min-w-0">
             <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
               {meta.emoji} {meta.symbol} — {meta.name} Spot
             </p>
@@ -61,7 +61,7 @@ export function PriceCard({ stats, loading, onRefresh, metal = DEFAULT_ASSET }: 
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <div
               className={cn(
                 'flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold',
@@ -90,10 +90,10 @@ export function PriceCard({ stats, loading, onRefresh, metal = DEFAULT_ASSET }: 
           </div>
         </div>
 
-        <div className="mb-5 flex items-baseline gap-3">
+        <div className="mb-5 flex flex-wrap items-baseline gap-x-3 gap-y-1">
           <span
             className={cn(
-              'inline-flex items-baseline text-4xl font-bold text-foreground tracking-tight tabular-nums rounded-lg px-1 -mx-1',
+              'inline-flex items-baseline text-3xl sm:text-4xl font-bold text-foreground tracking-tight tabular-nums rounded-lg px-1 -mx-1',
               flash === 'up' && 'animate-flash-up',
               flash === 'down' && 'animate-flash-down',
             )}
@@ -111,7 +111,7 @@ export function PriceCard({ stats, loading, onRefresh, metal = DEFAULT_ASSET }: 
           </span>
         </div>
 
-        <div className="grid grid-cols-3 gap-4 pt-4 border-t border-border">
+        <div className="grid grid-cols-3 gap-3 sm:gap-4 pt-4 border-t border-border">
           <div>
             <p className="text-xs text-muted-foreground mb-1">24H High</p>
             <p className="text-sm font-semibold text-foreground tabular-nums">

@@ -23,10 +23,10 @@ export function Header({ title }: { title: string }) {
   }, []);
 
   return (
-    <header className="flex items-center justify-between px-6 py-4 border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-      <h1 className="text-lg font-semibold text-foreground">{title}</h1>
+    <header className="flex items-center justify-between gap-3 px-4 sm:px-6 py-3 sm:py-4 border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+      <h1 className="text-base sm:text-lg font-semibold text-foreground truncate">{title}</h1>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3 shrink-0">
         <div
           className={cn(
             'flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border',

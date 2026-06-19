@@ -73,7 +73,7 @@ export function ChannelsManager() {
 
       {/* Editor */}
       {form && (
-        <div className="p-5 border-b border-border space-y-3 bg-secondary/20">
+        <div className="p-4 sm:p-5 border-b border-border space-y-3 bg-secondary/20">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <input
               value={form.channelId}
@@ -111,7 +111,7 @@ export function ChannelsManager() {
             ))}
           </p>
 
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
             <label className="flex items-center gap-2 text-xs text-muted-foreground">
               <input
                 type="checkbox"

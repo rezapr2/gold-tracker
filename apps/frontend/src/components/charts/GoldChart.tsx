@@ -144,17 +144,19 @@ export function GoldChart({ metal = DEFAULT_METAL }: GoldChartProps) {
 
   return (
     <div className="bg-card border border-border rounded-2xl overflow-hidden">
-      <div className="flex items-center justify-between px-5 py-3.5 border-b border-border">
+      <div className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5 sm:py-3.5 border-b border-border">
         <h3 className="text-sm font-semibold text-foreground">{meta.emoji} {meta.symbol} Chart</h3>
 
-        <div className="flex items-center gap-2">
-          <div className="flex gap-0.5 p-0.5 bg-secondary rounded-lg">
+        {/* On phones the two toggle groups scroll horizontally instead of
+            overflowing the card. */}
+        <div className="flex items-center gap-2 overflow-x-auto -mx-1 px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex shrink-0 gap-0.5 p-0.5 bg-secondary rounded-lg">
             {CHART_TYPES.map((ct) => (
               <button
                 key={ct.value}
                 onClick={() => setChartType(ct.value)}
                 className={cn(
-                  'px-2.5 py-1 rounded-md text-xs font-medium transition-all',
+                  'px-2.5 py-1.5 sm:py-1 rounded-md text-xs font-medium transition-all',
                   chartType === ct.value
                     ? 'bg-card text-foreground shadow-sm'
                     : 'text-muted-foreground hover:text-foreground',
@@ -165,13 +167,13 @@ export function GoldChart({ metal = DEFAULT_METAL }: GoldChartProps) {
             ))}
           </div>
 
-          <div className="flex gap-0.5 p-0.5 bg-secondary rounded-lg">
+          <div className="flex shrink-0 gap-0.5 p-0.5 bg-secondary rounded-lg">
             {TIMEFRAMES.map((tf) => (
               <button
                 key={tf.value}
                 onClick={() => setTimeframe(tf.value)}
                 className={cn(
-                  'px-2.5 py-1 rounded-md text-xs font-medium transition-all',
+                  'px-2.5 py-1.5 sm:py-1 rounded-md text-xs font-medium transition-all',
                   timeframe === tf.value
                     ? 'bg-gold-500/20 text-gold-400'
                     : 'text-muted-foreground hover:text-foreground',
