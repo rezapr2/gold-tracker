@@ -5,8 +5,26 @@ server using Docker Compose.
 
 The whole stack runs in containers, so the only host dependencies are Docker
 and the Compose plugin. Data lives in named Docker volumes (`mongo_data`,
-`redis_data`), which **survive code updates** — you only lose data if you
-explicitly delete the volumes.
+`redis_data`, `rabbitmq_data`), which **survive code updates** — you only lose
+data if you explicitly delete the volumes.
+
+> **Architecture (microservices).** The former single `backend` container is now
+> five independently deployable services talking over a **RabbitMQ** broker:
+>
+> | Service | Role |
+> |---|---|
+> | `fetcher-metals` | fetches XAU/XAG from the USD price APIs |
+> | `fetcher-estjt` | scrapes the Iranian coin/gram-gold (IR_*) prices |
+> | `core` | owns MongoDB — persists prices, aggregates, settings, service registry; answers read RPCs |
+> | `web-api` | the HTTP + WebSocket gateway the site/Nginx talks to (port `3001`) |
+> | `telegram-bot` | the Telegram publishers |
+>
+> Flow: `fetchers → (price.fetched) → core → (price.saved/alert) → web-api + telegram-bot`.
+> Wherever this guide says **`backend`**, the HTTP/WS entrypoint is now
+> **`web-api`** (e.g. `docker compose logs -f web-api`). All application config
+> lives in **one root `.env`** (see `.env.example`); the old per-`apps/backend/.env`
+> step is obsolete. Admins can watch every service live at **Admin → Services**,
+> backed by `GET /api/v1/admin/services`. RabbitMQ's management UI is on `:15672`.
 
 ---
 
@@ -14,8 +32,8 @@ explicitly delete the volumes.
 
 | File | What it runs | Use when |
 |---|---|---|
-| `docker-compose.prod.yml` | **Full stack** — MongoDB, Redis, backend, frontend, Nginx (HTTP/HTTPS) | One server hosts the whole site (dashboard + API). **Default — start here.** |
-| `docker-compose.vm.yml` | **Backend only** — MongoDB, Redis, backend, Nginx (API + WebSocket) | Frontend is hosted separately (e.g. Vercel); the VM serves only the API. See [Appendix A](#appendix-a--backend-only-vm-deployment). |
+| `docker-compose.prod.yml` | **Full stack** — MongoDB, Redis, RabbitMQ, the 5 services, frontend, Nginx (HTTP/HTTPS) | One server hosts the whole site (dashboard + API). **Default — start here.** |
+| `docker-compose.vm.yml` | **Backend only** — MongoDB, Redis, RabbitMQ, the 5 services, Nginx (API + WebSocket) | Frontend is hosted separately (e.g. Vercel); the VM serves only the API. See [Appendix A](#appendix-a--backend-only-vm-deployment). |
 | `docker-compose.yml` | Local dev (ports exposed, no auth, hot reload) | **Not for production.** |
 
 This guide uses `docker-compose.prod.yml` unless stated otherwise.
@@ -28,7 +46,7 @@ This guide uses `docker-compose.prod.yml` unless stated otherwise.
                       └──┬─────┬──┘
             /  (UI)      │     │   /api/  /socket.io/
                   ┌──────▼─┐ ┌─▼────────┐
-                  │frontend│ │ backend  │  NestJS API + WebSocket
+                  │frontend│ │ web-api  │  NestJS API + WebSocket
                   │ :3000  │ │  :3001   │
                   └────────┘ └─┬──────┬─┘
                                │      │
@@ -37,7 +55,7 @@ This guide uses `docker-compose.prod.yml` unless stated otherwise.
                         └───────┘  └────────┘
 ```
 
-Only Nginx (`80`/`443`) is published to the host. Backend, frontend, MongoDB,
+Only Nginx (`80`/`443`) is published to the host. The services, frontend, MongoDB,
 and Redis are reachable only on the internal Docker network.
 
 ---
@@ -94,63 +112,54 @@ cd /opt/gold-tracker
 `docker-compose.prod.yml` interpolates these from a `.env` file in the repo
 root (the directory you run `docker compose` from). Create it:
 
+There is now **one** root `.env` for the whole stack — every service reads it
+(Compose passes it via `env_file` and sets the service-internal `MONGODB_URI`,
+`REDIS_*`, and `RABBITMQ_URL`). Start from the template and edit it:
+
 ```bash
-cat > /opt/gold-tracker/.env <<'EOF'
-# --- MongoDB credentials (used to build the backend MONGODB_URI) ---
-MONGO_ROOT_USER=goldadmin
-MONGO_ROOT_PASSWORD=change-me-strong-mongo-password
-
-# --- Redis ---
-REDIS_PASSWORD=change-me-strong-redis-password
-
-# --- Public URLs baked into the frontend at BUILD time ---
-# Same origin as your domain; Nginx proxies /api and /socket.io to the backend.
-NEXT_PUBLIC_API_URL=https://aprice.online
-NEXT_PUBLIC_WS_URL=https://aprice.online
-EOF
-
+cp .env.example /opt/gold-tracker/.env
+nano /opt/gold-tracker/.env      # fill in the values below
 chmod 600 /opt/gold-tracker/.env
 ```
 
-> ⚠️ `NEXT_PUBLIC_*` are **build-time** values. If you change them later you
-> must rebuild the frontend image (see [§4 Updating](#4-updating-to-a-new-release)).
-
-### 3.3 Create the **backend** `.env` (application config)
-
-```bash
-cp apps/backend/.env.example apps/backend/.env
-nano apps/backend/.env
-```
-
-Set these at minimum (Compose overrides `MONGODB_URI`, `REDIS_*` from the root
-`.env`, so you don't need to repeat the DB connection strings here):
+Set these at minimum:
 
 ```env
-NODE_ENV=production
-APP_SECRET=<long-random-string>
-JWT_SECRET=<long-random-string>
+# --- Datastores (used to build the authenticated MONGODB_URI + Redis auth) ---
+MONGO_ROOT_USER=goldadmin
+MONGO_ROOT_PASSWORD=change-me-strong-mongo-password
+REDIS_PASSWORD=change-me-strong-redis-password
 
-# Admin login for the dashboard
+# --- Auth / admin (web-api) ---
+JWT_SECRET=<long-random-string>          # openssl rand -hex 32
 ADMIN_EMAIL=rezapr2@gmail.com
 ADMIN_PASSWORD=<strong-admin-password>
 
-# At least one price provider
+# --- At least one price provider (fetcher-metals) ---
 GOLDAPI_KEY=...
 METALS_DEV_KEY=...
 TWELVE_DATA_KEY=...
 ALPHA_VANTAGE_KEY=...
 
-# Telegram (optional — can also be set later in the Settings UI)
+# --- Telegram (optional — can also be set later in the Settings UI) ---
 TELEGRAM_BOT_TOKEN=
 TELEGRAM_CHANNEL_ID=
 TELEGRAM_SILVER_BOT_TOKEN=
 TELEGRAM_SILVER_CHANNEL_ID=
 
-# CORS — your public origin
+# --- Public origin ---
 FRONTEND_URL=https://aprice.online
+# Baked into the frontend at BUILD time (rebuild the image if you change them):
+NEXT_PUBLIC_API_URL=https://aprice.online
+NEXT_PUBLIC_WS_URL=https://aprice.online
 ```
 
-Generate strong secrets with: `openssl rand -hex 32`
+> ⚠️ `NEXT_PUBLIC_*` are **build-time** values. If you change them later you
+> must rebuild the frontend image (see [§4 Updating](#4-updating-to-a-new-release)).
+>
+> Generate strong secrets with: `openssl rand -hex 32`
+
+### 3.3 (removed — all config now lives in the single root `.env` above)
 
 ### 3.4 Nginx domain
 
@@ -191,15 +200,15 @@ First build takes a few minutes. Watch progress / logs:
 
 ```bash
 docker compose -f docker-compose.prod.yml ps
-docker compose -f docker-compose.prod.yml logs -f backend
+docker compose -f docker-compose.prod.yml logs -f web-api
 ```
 
 ### 3.7 Verify
 
 ```bash
-# Nginx + backend health
+# Nginx + web-api health
 curl -sf https://aprice.online/health && echo " nginx OK"
-curl -sf https://aprice.online/api/v1/health && echo " backend OK"
+curl -sf https://aprice.online/api/v1/health && echo " API OK"
 ```
 
 Then open `https://aprice.online` in a browser. Log in to the admin area with
@@ -252,9 +261,9 @@ That's the whole update loop. A few notes:
 
 - **Frontend env changes** (`NEXT_PUBLIC_*` in the root `.env`) only take effect
   after a rebuild — `--build` handles that.
-- **Backend env changes** (`apps/backend/.env`) need a container recreate, which
+- **Backend env changes** (`.env`) need a container recreate, which
   `up -d` does automatically when it detects the change. If in doubt:
-  `docker compose -f docker-compose.prod.yml up -d --force-recreate backend`
+  `docker compose -f docker-compose.prod.yml up -d --force-recreate`
 - **Nginx config changes** (`docker/nginx/*.conf`) — the files are bind-mounted,
   so just reload: `docker compose -f docker-compose.prod.yml restart nginx`
 - **Rebuild a single service** instead of all:
@@ -278,7 +287,7 @@ cd /opt/gold-tracker
 C="docker compose -f docker-compose.prod.yml"   # shorthand
 
 $C ps                       # status of all services
-$C logs -f backend          # follow backend logs
+$C logs -f web-api          # follow web-api logs
 $C logs --tail=100 nginx    # last 100 nginx lines
 $C restart backend          # restart one service
 $C stop                     # stop everything (keeps data)
@@ -356,7 +365,7 @@ cat backup-YYYY-MM-DD.archive | docker compose -f docker-compose.prod.yml exec -
 | `MONGODB_URI` auth fails | Root `.env` `MONGO_ROOT_USER`/`PASSWORD` changed **after** the volume was created. Mongo credentials are fixed at first init — either use the original creds or recreate the volume (`down -v`, destroys data). |
 | Frontend shows wrong API URL | `NEXT_PUBLIC_*` is build-time. Fix the root `.env`, then `up -d --build frontend`. |
 | Prices not updating | Provider errors in `... logs backend`. See [§8.1](#81-price-providers--rate-limits) — usually the fetch interval is too aggressive for free API tiers. |
-| Changes to `apps/backend/.env` ignored | `... up -d --force-recreate backend`. |
+| Changes to `.env` ignored | `... up -d --force-recreate`. |
 | Out of disk | `docker image prune -f` and `docker system df`. |
 
 ### 8.1 Price providers & rate limits
@@ -375,8 +384,8 @@ quota-limited providers below are only used if it's unreachable.
 **Recommended:** `PRICE_FETCH_INTERVAL=*/15 * * * *` (≈192 req/day across both
 metals — within TwelveData's free 800/day). Change it either in the dashboard
 **Settings** page (stored in DB, applied live — no restart) or in
-`apps/backend/.env` followed by
-`docker compose -f docker-compose.prod.yml up -d --force-recreate backend`.
+`.env` followed by
+`docker compose -f docker-compose.prod.yml up -d --force-recreate`.
 
 **Diagnosing provider failures** (keys resolve **DB-first**, env fallback):
 

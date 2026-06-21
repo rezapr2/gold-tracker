@@ -6,8 +6,8 @@ on:
   pull_request:
 
 jobs:
-  backend:
-    name: Backend (lint • test • build)
+  services:
+    name: Services (test • build)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,17 +20,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Lint
-        run: npm run lint --workspace=apps/backend
+      - name: Build shared kernel
+        run: npm run build:shared
 
-      - name: Unit tests
-        run: npm test --workspace=apps/backend
+      - name: Unit tests (all services)
+        run: npm test
 
-      - name: E2E (smoke) tests
-        run: npm run test:e2e --workspace=apps/backend
-
-      - name: Build
-        run: npm run build --workspace=apps/backend
+      - name: Build all services
+        run: npm run build:services
 
   frontend:
     name: Frontend (lint • build)

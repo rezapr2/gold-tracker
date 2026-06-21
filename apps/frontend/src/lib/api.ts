@@ -83,3 +83,8 @@ export const settingsApi = {
   get: () => api.get('/settings'),
   update: (data: any) => api.put('/settings', data),
 };
+
+/** Live status of every backend microservice (from the heartbeat registry). */
+export const servicesApi = {
+  list: () => api.get('/admin/services'),
+};

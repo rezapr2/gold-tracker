@@ -6,21 +6,32 @@ A production-ready full-stack application for live precious-metals price trackin
 
 ## Architecture
 
+Microservices: the fetchers publish prices to **core** (which owns MongoDB) over
+**RabbitMQ**; core re-publishes saved prices/alerts to the publishers.
+
 ```
 gold-tracker/
 ├── apps/
-│   ├── backend/          # NestJS API + WebSocket server
+│   ├── core/             # owns MongoDB: persist, aggregate, settings, registry; read RPCs
+│   ├── fetcher-metals/   # XAU/XAG from the USD price APIs
+│   ├── fetcher-estjt/    # Iranian coin/gram-gold (IR_*) scraper
+│   ├── web-api/          # HTTP + WebSocket gateway (the site backend)
+│   ├── telegram-bot/     # Telegram publishers
 │   └── frontend/         # Next.js 14 dashboard
 ├── packages/
-│   └── shared/           # Shared TypeScript types
+│   └── shared/           # @gold-tracker/shared: contracts, asset registry, RMQ, redis, heartbeat
 └── docker/               # Nginx & MongoDB config
+
+#   fetchers ──price.fetched──▶ core ──price.saved/alert──▶ web-api + telegram-bot
+#   web-api / telegram-bot ──RPC (prices/analytics/settings)──▶ core
 ```
 
 ## Tech Stack
 
 | Layer | Technology |
 |---|---|
-| Backend | NestJS, TypeScript, MongoDB/Mongoose, Socket.IO |
+| Backend | NestJS microservices, TypeScript, MongoDB/Mongoose, Socket.IO |
+| Message bus | RabbitMQ (`@nestjs/microservices`, topic exchange) |
 | Scheduler | @nestjs/schedule (node-cron) |
 | Auth | JWT + Passport |
 | Frontend | Next.js 14 (App Router), Tailwind CSS |
@@ -37,9 +48,9 @@ gold-tracker/
 git clone <repo>
 cd gold-tracker
 
-# Backend environment
-cp apps/backend/.env.example apps/backend/.env
-# Edit apps/backend/.env and fill in your API keys
+# Backend environment — one root .env shared by all services
+cp .env.example .env
+# Edit .env and fill in your API keys / secrets
 
 # Frontend environment
 cp apps/frontend/.env.example apps/frontend/.env.local
@@ -53,26 +64,33 @@ docker-compose up -d
 
 Services will be available at:
 - **Dashboard**: http://localhost (via Nginx)
-- **Backend API**: http://localhost:3001
+- **API + WebSocket (web-api)**: http://localhost:3001
 - **API Docs (Swagger)**: http://localhost:3001/api/docs
+- **RabbitMQ management UI**: http://localhost:15672
 - **MongoDB**: localhost:27017
 - **Redis**: localhost:6379
 
 ### 3. Local Development (without Docker)
 
-Prerequisites: Node.js 20+, MongoDB, Redis
+Prerequisites: Node.js 20+, MongoDB, Redis, RabbitMQ
 
 ```bash
 # Install dependencies
 npm install
 
-# Start both apps in watch mode
+# Build the shared kernel once (services import @gold-tracker/shared)
+npm run build:shared
+
+# Start all services + the frontend in watch mode
 npm run dev
 ```
 
 ## Environment Variables
 
-### Backend (`apps/backend/.env`)
+### Backend services (root `.env`)
+
+All services read one root `.env` (see `.env.example`). Docker Compose sets the
+service-internal hosts (`MONGODB_URI`, `REDIS_HOST`, `RABBITMQ_URL`).
 
 ```env
 # Required
@@ -99,7 +117,8 @@ TELEGRAM_SEND_CHARTS=true            # attach trend chart images to updates
 QUICKCHART_URL=https://quickchart.io # chart renderer (self-host for privacy)
 REDIS_HOST=localhost
 REDIS_PORT=6379
-PORT=3001
+RABBITMQ_URL=amqp://localhost:5672   # message bus between services
+ESTJT_URL=https://www.estjt.ir/tv/   # Iranian price source (fetcher-estjt)
 ```
 
 ### Frontend (`apps/frontend/.env.local`)
@@ -117,32 +136,14 @@ NEXT_PUBLIC_WS_URL=http://localhost:3001
 - Deduplication prevents duplicate price entries
 - Graceful error handling — continues on provider failure
 
-### Data Storage (MongoDB)
-- **gold_prices** — raw minute-level price data
-- **price_statistics** — daily/weekly/monthly computed analytics
-- **publish_logs** — Telegram publish history
-- **bot_settings** — configurable bot/API settings
+### Data Storage (MongoDB — owned by the services that write it)
+- **gold_prices** — raw minute-level price data *(core)*
+- **price_statistics** — daily/weekly/monthly computed analytics *(core)*
+- **bot_settings** — configurable bot/API settings *(core)*
+- **service_registry** — live per-instance heartbeats for the admin Services view *(core, TTL-indexed)*
+- **publish_logs** / **telegram_channels** — Telegram publish history + channels *(telegram-bot)*
 - Hourly and daily aggregates built by cron
 - Configurable data retention (default 90 days)
-
-#### Historical backfill (one-time)
-
-The tracker only records prices going forward, so charts start empty. To seed
-years of daily history in one shot (idempotent — safe to re-run), run with a
-`TWELVE_DATA_KEY` set:
-
-```bash
-# CLI (default ~5000 days, or pass a day count)
-npm run backfill --workspace=apps/backend
-npm run backfill --workspace=apps/backend -- 1000
-
-# In Docker
-docker-compose exec backend npm run backfill -- 1000
-
-# Or via the authenticated API
-curl -X POST "http://localhost:3001/api/v1/prices/backfill?days=1000" \
-  -H "Authorization: Bearer <token>"
-```
 
 ### Analytics
 - Daily, weekly, monthly price statistics
@@ -191,7 +192,6 @@ GET  /api/v1/prices/hourly         Hourly aggregates
 GET  /api/v1/prices/daily          Daily aggregates
 GET  /api/v1/prices/ratio          Current gold/silver ratio
 GET  /api/v1/prices/export         Price history as CSV (?metal=&hours=)
-POST /api/v1/prices/backfill       One-time historical import (auth required)
 
 GET  /api/v1/analytics/summary     Latest daily/weekly/monthly stats
 GET  /api/v1/analytics/daily       Daily analytics history
@@ -210,10 +210,12 @@ DELETE /api/v1/telegram/channels/:id  Delete a channel (auth required)
 POST /api/v1/auth/login            Admin login
 GET  /api/v1/auth/profile          Current user (auth required)
 
-GET  /api/v1/health                Liveness/readiness probe (DB status)
+GET  /api/v1/health                Liveness/readiness probe
 
 GET  /api/v1/settings              Get settings (auth required)
 PUT  /api/v1/settings              Update settings (auth required)
+
+GET  /api/v1/admin/services        Live status of every microservice (auth required)
 ```
 
 ### WebSocket Events
@@ -245,15 +247,15 @@ sudo usermod -aG docker $USER
 git clone <repo> /opt/gold-tracker
 cd /opt/gold-tracker
 
-# Set production env vars
-cp apps/backend/.env.example apps/backend/.env
+# Set production env vars (single root .env)
+cp .env.example .env
 # Edit .env with production values
 
 # Build and start
 docker-compose -f docker-compose.prod.yml up -d --build
 
-# Check logs
-docker-compose logs -f backend
+# Check logs (web-api is the HTTP/WS entrypoint; or core/fetcher-metals/…)
+docker-compose logs -f web-api
 ```
 
 ### SSL with Let's Encrypt
@@ -267,22 +269,24 @@ certbot certonly --standalone -d aprice.online
 ## Testing
 
 ```bash
-# Unit tests
-cd apps/backend && npm test
+# All service unit/integration tests (builds the shared kernel first)
+npm test
 
-# Integration tests
-cd apps/backend && npm run test:e2e
-
-# Coverage report
-cd apps/backend && npm run test:cov
+# A single service
+npm test --workspace=apps/core
 ```
 
 ## Adding a New Price Provider
 
-1. Create `apps/backend/src/modules/gold-price/providers/my-provider.ts`
-2. Implement `fetchPrice(): Promise<GoldPriceData | null>`
-3. Register in `GoldPriceModule` providers array
-4. Inject into `GoldPriceService` and add to the `providers` array in `fetchAndSavePrice()`
+1. Create `apps/fetcher-metals/src/providers/my-provider.ts` implementing
+   `PriceProvider` (`supports()` + `fetchPrice(): Promise<GoldPriceData | null>`)
+2. Register it in `FetchModule` providers and add it to the failover list in
+   `fetch.service.ts`
+3. List the provider's `name` under each asset it serves in the registry
+   (`packages/shared/src/assets/asset.types.ts`)
+
+For a whole new *source* (e.g. another scraper), add a sibling `apps/fetcher-*`
+service that emits `price.fetched` — core ingests it with no changes.
 
 ## License
 

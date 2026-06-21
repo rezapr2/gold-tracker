@@ -7,6 +7,7 @@ import {
   Globe,
   Home,
   LogOut,
+  Server,
   Settings,
   TrendingUp,
 } from 'lucide-react';
@@ -16,6 +17,7 @@ import { useAuthStore } from '@/store/auth.store';
 const navItems = [
   { href: '/admin', icon: Home, label: 'Dashboard' },
   { href: '/admin/analytics', icon: BarChart3, label: 'Analytics' },
+  { href: '/admin/services', icon: Server, label: 'Services' },
   { href: '/admin/telegram', icon: Bot, label: 'Telegram' },
   { href: '/admin/settings', icon: Settings, label: 'Settings' },
 ];

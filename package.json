@@ -7,10 +7,12 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
-    "dev:backend": "npm run dev --workspace=apps/backend",
+    "build:shared": "npm run build --workspace=packages/shared",
+    "build:services": "npm run build:shared && npm run build --workspace=apps/core && npm run build --workspace=apps/fetcher-metals && npm run build --workspace=apps/fetcher-estjt && npm run build --workspace=apps/web-api && npm run build --workspace=apps/telegram-bot",
+    "build": "npm run build:services && npm run build --workspace=apps/frontend",
+    "dev": "concurrently -n core,metals,estjt,web,tg,fe \"npm run dev --workspace=apps/core\" \"npm run dev --workspace=apps/fetcher-metals\" \"npm run dev --workspace=apps/fetcher-estjt\" \"npm run dev --workspace=apps/web-api\" \"npm run dev --workspace=apps/telegram-bot\" \"npm run dev --workspace=apps/frontend\"",
     "dev:frontend": "npm run dev --workspace=apps/frontend",
-    "build": "npm run build --workspace=packages/shared && npm run build --workspace=apps/backend && npm run build --workspace=apps/frontend",
+    "test": "npm run build:shared && npm run test --workspace=apps/core --workspace=apps/fetcher-metals --workspace=apps/fetcher-estjt --workspace=apps/web-api --workspace=apps/telegram-bot --if-present",
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down",
     "docker:prod": "docker-compose -f docker-compose.prod.yml up -d"
