@@ -3,6 +3,7 @@ import { ValidationPipe, Logger } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
+import { RedisIoAdapter } from './adapters/redis-io.adapter';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -21,6 +22,12 @@ async function bootstrap() {
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
   });
+
+  // Broadcast WebSocket events across instances via Redis pub/sub when
+  // available; falls back to the default single-instance adapter otherwise.
+  const redisIoAdapter = new RedisIoAdapter(app);
+  await redisIoAdapter.connect();
+  app.useWebSocketAdapter(redisIoAdapter);
 
   app.setGlobalPrefix('api/v1');
 

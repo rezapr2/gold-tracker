@@ -60,3 +60,7 @@ GoldPriceSchema.index({ timestamp: -1, provider: 1 });
 GoldPriceSchema.index({ metal: 1, timestamp: -1 });
 GoldPriceSchema.index({ metal: 1, isHourlyAggregate: 1, timestamp: -1 });
 GoldPriceSchema.index({ metal: 1, isDailyAggregate: 1, timestamp: -1 });
+// A TTL index ('ttl_raw') auto-expires raw points after the retention window.
+// It is intentionally NOT declared here: its expireAfterSeconds tracks the
+// admin-configurable retention, so it's created/updated at runtime by
+// GoldPriceService.ensureRetentionIndex instead of statically.

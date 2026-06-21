@@ -20,6 +20,9 @@ db.gold_prices.createIndex({ timestamp: -1, provider: 1 });
 db.gold_prices.createIndex({ metal: 1, timestamp: -1 });
 db.gold_prices.createIndex({ metal: 1, isHourlyAggregate: 1, timestamp: -1 });
 db.gold_prices.createIndex({ metal: 1, isDailyAggregate: 1, timestamp: -1 });
+// NOTE: the 'ttl_raw' TTL index that expires raw points is created at runtime by
+// the backend (GoldPriceService.ensureRetentionIndex) because its expiry follows
+// the admin-configurable retention. It is deliberately not provisioned here.
 
 // price_statistics — mirrors analytics/schemas/price-statistics.schema.ts.
 db.price_statistics.createIndex({ metal: 1 });

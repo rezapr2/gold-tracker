@@ -9,11 +9,20 @@ import { TwelveDataProvider } from './providers/twelve-data.provider';
 import { AlphaVantageProvider } from './providers/alpha-vantage.provider';
 import { RedisService } from '../redis/redis.service';
 import { Metal, DEFAULT_METAL } from './metal.types';
+import { CircuitBreaker } from '../../common/utils/circuit-breaker';
 import { startOfHour, startOfDay, subHours, subDays, subMinutes } from 'date-fns';
+
+// Name of the TTL index that expires raw price points; managed at runtime by
+// ensureRetentionIndex so its window can follow the admin-configured retention.
+const RETENTION_INDEX = 'ttl_raw';
 
 @Injectable()
 export class GoldPriceService {
   private readonly logger = new Logger(GoldPriceService.name);
+  // Skip a provider that keeps failing for a cooldown instead of paying its
+  // timeout every minute. Keyed per provider+asset so one bad symbol doesn't
+  // sideline a provider for assets it still serves.
+  private readonly breaker = new CircuitBreaker();
 
   constructor(
     @InjectModel(GoldPrice.name) private goldPriceModel: Model<GoldPriceDocument>,
@@ -44,12 +53,20 @@ export class GoldPriceService {
     let priceData: GoldPriceData | null = null;
 
     for (const provider of providers) {
-      priceData = await provider.fetchPrice(metal);
-      if (priceData) break;
+      const key = `${provider.name}:${metal}`;
+      if (this.breaker.isOpen(key)) continue;
+
+      const result = await provider.fetchPrice(metal);
+      if (result) {
+        this.breaker.recordSuccess(key);
+        priceData = result;
+        break;
+      }
+      this.breaker.recordFailure(key);
     }
 
     if (!priceData) {
-      this.logger.error(`All price providers failed for ${metal}`);
+      this.logger.error(`All price providers failed (or are circuit-broken) for ${metal}`);
       return null;
     }
 
@@ -325,6 +342,55 @@ export class GoldPriceService {
       isDailyAggregate: false,
     });
     this.logger.log(`Cleaned ${result.deletedCount} old price records`);
+  }
+
+  /**
+   * Ensures a MongoDB TTL index that auto-expires raw (minute-level) points after
+   * the retention window, so retention is enforced continuously and per-document
+   * by the database itself rather than only by the daily cron — and it keeps
+   * working even when the instance that would have run the cron is down.
+   *
+   * Aggregates are preserved via a partial filter. The expiry tracks the
+   * admin-configured retention: this runs on boot and after each settings save
+   * (via the scheduler's applySchedule), using collMod to adjust an existing
+   * index without a drop/rebuild. The expiry is dynamic, which is why this index
+   * is managed here rather than declared statically in the schema / init.js.
+   */
+  async ensureRetentionIndex(retentionDays: number): Promise<void> {
+    // Floor at 1 day so a misconfigured 0/negative value can't wipe live data.
+    const expireAfterSeconds = Math.max(1, Math.floor(retentionDays)) * 86400;
+    const coll = this.goldPriceModel.collection;
+
+    try {
+      let existing: { expireAfterSeconds?: number } | undefined;
+      try {
+        const indexes = await coll.indexes();
+        existing = indexes.find((i: any) => i.name === RETENTION_INDEX);
+      } catch {
+        // Namespace not created yet (fresh DB) — fall through to createIndex.
+        existing = undefined;
+      }
+
+      if (!existing) {
+        await coll.createIndex(
+          { timestamp: 1 },
+          {
+            name: RETENTION_INDEX,
+            expireAfterSeconds,
+            partialFilterExpression: { isHourlyAggregate: false, isDailyAggregate: false },
+          },
+        );
+        this.logger.log(`TTL retention index created: raw prices expire after ${retentionDays}d`);
+      } else if (existing.expireAfterSeconds !== expireAfterSeconds) {
+        await this.goldPriceModel.db.db.command({
+          collMod: coll.collectionName,
+          index: { name: RETENTION_INDEX, expireAfterSeconds },
+        });
+        this.logger.log(`TTL retention updated to ${retentionDays}d`);
+      }
+    } catch (error) {
+      this.logger.warn(`Could not ensure TTL retention index: ${error.message}`);
+    }
   }
 
   async getPriceStats(metal: Metal = DEFAULT_METAL): Promise<any> {

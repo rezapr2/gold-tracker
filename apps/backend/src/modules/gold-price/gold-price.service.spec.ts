@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getModelToken } from '@nestjs/mongoose';
 import { GoldPriceService } from './gold-price.service';
 import { GoldPrice } from './schemas/gold-price.schema';
+import { GoldApiComProvider } from './providers/gold-api-com.provider';
 import { GoldApiProvider } from './providers/goldapi.provider';
 import { MetalsDevProvider } from './providers/metals-dev.provider';
 import { TwelveDataProvider } from './providers/twelve-data.provider';
@@ -20,6 +21,12 @@ const queryResult = (value: any) => {
   return q;
 };
 
+const mockCollection = {
+  collectionName: 'gold_prices',
+  indexes: jest.fn(),
+  createIndex: jest.fn(),
+};
+const mockDbCommand = jest.fn();
 const mockGoldPriceModel = {
   create: jest.fn(),
   findOne: jest.fn(),
@@ -27,15 +34,21 @@ const mockGoldPriceModel = {
   aggregate: jest.fn(),
   deleteMany: jest.fn(),
   bulkWrite: jest.fn(),
+  collection: mockCollection,
+  db: { db: { command: mockDbCommand } },
 };
 
 // Each provider now declares which assets it supports; default to "supports
 // everything" so the existing fetch flow is exercised (clearAllMocks keeps this
-// inline implementation between tests).
-const mockGoldApiProvider = { fetchPrice: jest.fn(), supports: jest.fn(() => true) };
-const mockMetalsDevProvider = { fetchPrice: jest.fn(), supports: jest.fn(() => true) };
-const mockTwelveDataProvider = { fetchPrice: jest.fn(), fetchHistory: jest.fn(), supports: jest.fn(() => true) };
-const mockAlphaVantageProvider = { fetchPrice: jest.fn(), supports: jest.fn(() => true) };
+// inline implementation between tests). `name` matches the real providers so the
+// circuit breaker keys each one distinctly.
+// gold-api.com is the real primary; default it to "no data" so these tests keep
+// exercising the goldapi fallback path they were written against.
+const mockGoldApiComProvider = { name: 'goldapicom', fetchPrice: jest.fn().mockResolvedValue(null), supports: jest.fn(() => true) };
+const mockGoldApiProvider = { name: 'goldapi', fetchPrice: jest.fn(), supports: jest.fn(() => true) };
+const mockMetalsDevProvider = { name: 'metalsdev', fetchPrice: jest.fn(), supports: jest.fn(() => true) };
+const mockTwelveDataProvider = { name: 'twelvedata', fetchPrice: jest.fn(), fetchHistory: jest.fn(), supports: jest.fn(() => true) };
+const mockAlphaVantageProvider = { name: 'alphavantage', fetchPrice: jest.fn(), supports: jest.fn(() => true) };
 
 describe('GoldPriceService', () => {
   let service: GoldPriceService;
@@ -45,6 +58,7 @@ describe('GoldPriceService', () => {
       providers: [
         GoldPriceService,
         { provide: getModelToken(GoldPrice.name), useValue: mockGoldPriceModel },
+        { provide: GoldApiComProvider, useValue: mockGoldApiComProvider },
         { provide: GoldApiProvider, useValue: mockGoldApiProvider },
         { provide: MetalsDevProvider, useValue: mockMetalsDevProvider },
         { provide: TwelveDataProvider, useValue: mockTwelveDataProvider },
@@ -257,6 +271,66 @@ describe('GoldPriceService', () => {
       expect(lines[0]).toBe('timestamp,metal,price,open,high,low,changePercent,provider');
       expect(lines).toHaveLength(2);
       expect(lines[1]).toContain('XAU,2400,2390,2410,2385,0.4,goldapi');
+    });
+  });
+
+  describe('ensureRetentionIndex', () => {
+    const DAY = 86400;
+
+    it('creates the TTL index (excluding aggregates) when it is missing', async () => {
+      mockCollection.indexes.mockResolvedValue([{ name: '_id_' }]);
+
+      await service.ensureRetentionIndex(90);
+
+      expect(mockCollection.createIndex).toHaveBeenCalledWith(
+        { timestamp: 1 },
+        expect.objectContaining({
+          name: 'ttl_raw',
+          expireAfterSeconds: 90 * DAY,
+          partialFilterExpression: { isHourlyAggregate: false, isDailyAggregate: false },
+        }),
+      );
+      expect(mockDbCommand).not.toHaveBeenCalled();
+    });
+
+    it('updates the expiry via collMod when the retention changed', async () => {
+      mockCollection.indexes.mockResolvedValue([{ name: 'ttl_raw', expireAfterSeconds: 90 * DAY }]);
+
+      await service.ensureRetentionIndex(30);
+
+      expect(mockCollection.createIndex).not.toHaveBeenCalled();
+      expect(mockDbCommand).toHaveBeenCalledWith({
+        collMod: 'gold_prices',
+        index: { name: 'ttl_raw', expireAfterSeconds: 30 * DAY },
+      });
+    });
+
+    it('does nothing when the existing expiry already matches', async () => {
+      mockCollection.indexes.mockResolvedValue([{ name: 'ttl_raw', expireAfterSeconds: 90 * DAY }]);
+
+      await service.ensureRetentionIndex(90);
+
+      expect(mockCollection.createIndex).not.toHaveBeenCalled();
+      expect(mockDbCommand).not.toHaveBeenCalled();
+    });
+
+    it('creates the index when the namespace does not exist yet', async () => {
+      mockCollection.indexes.mockRejectedValue(new Error('ns does not exist'));
+
+      await service.ensureRetentionIndex(90);
+
+      expect(mockCollection.createIndex).toHaveBeenCalled();
+    });
+
+    it('floors retention at one day so a bad value cannot wipe live data', async () => {
+      mockCollection.indexes.mockResolvedValue([]);
+
+      await service.ensureRetentionIndex(0);
+
+      expect(mockCollection.createIndex).toHaveBeenCalledWith(
+        { timestamp: 1 },
+        expect.objectContaining({ expireAfterSeconds: 1 * DAY }),
+      );
     });
   });
 

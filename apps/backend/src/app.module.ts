@@ -4,7 +4,10 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { APP_FILTER, APP_INTERCEPTOR, APP_GUARD } from '@nestjs/core';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import configuration from './config/configuration';
+import { validationSchema, validationOptions } from './config/validation';
 import { RedisModule } from './modules/redis/redis.module';
+import { RedisService } from './modules/redis/redis.service';
+import { RedisThrottlerStorage } from './modules/redis/redis-throttler.storage';
 import { GoldPriceModule } from './modules/gold-price/gold-price.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { TelegramModule } from './modules/telegram/telegram.module';
@@ -23,6 +26,10 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
       isGlobal: true,
       load: [configuration],
       envFilePath: ['.env', '.env.local'],
+      // Fail fast on a bad/insecure config (e.g. default secrets in production)
+      // rather than booting with silently-wrong values.
+      validationSchema,
+      validationOptions,
     }),
     MongooseModule.forRootAsync({
       inject: [ConfigService],
@@ -36,13 +43,16 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
         autoIndex: config.get<string>('nodeEnv') !== 'production',
       }),
     }),
-    ThrottlerModule.forRoot([
-      {
-        ttl: 60000,
-        limit: 100,
-      },
-    ]),
     RedisModule,
+    // Redis-backed storage so the rate limit is shared across all instances
+    // (falls back to per-instance in-memory storage when Redis is unavailable).
+    ThrottlerModule.forRootAsync({
+      inject: [RedisService],
+      useFactory: (redis: RedisService) => ({
+        throttlers: [{ ttl: 60000, limit: 100 }],
+        storage: new RedisThrottlerStorage(redis),
+      }),
+    }),
     // Global: must be registered before modules that resolve runtime config.
     SettingsStoreModule,
     GoldPriceModule,
