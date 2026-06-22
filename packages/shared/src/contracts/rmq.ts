@@ -37,9 +37,20 @@ export function rmqMicroserviceOptions(url: string, queue: string): RmqOptions {
   return { transport: Transport.RMQ, options: baseOptions(url, queue) as any };
 }
 
-/** Options for a ClientProxy that emits events / sends RPCs to the exchange. */
+/**
+ * Options for a ClientProxy that emits events / sends RPCs to the exchange.
+ *
+ * The reply consumer for request/response (`.send()`) runs on RabbitMQ's direct
+ * reply-to pseudo-queue (`amq.rabbitmq.reply-to`), which cannot acknowledge.
+ * It must be auto-ack, so we force `noAck: true` here — leaving the inherited
+ * `noAck: false` triggers `406 PRECONDITION_FAILED - reply consumer cannot
+ * acknowledge` and kills the channel. (Manual ack still applies on the server.)
+ */
 export function rmqClientOptions(url: string, queue: string): RmqOptions {
-  return { transport: Transport.RMQ, options: baseOptions(url, queue) as any };
+  return {
+    transport: Transport.RMQ,
+    options: { ...baseOptions(url, queue), noAck: true } as any,
+  };
 }
 
 export const RMQ_URL_DEFAULT = 'amqp://localhost:5672';

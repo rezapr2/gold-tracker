@@ -1,11 +1,12 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_INTERCEPTOR, APP_GUARD } from '@nestjs/core';
-import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { RedisModule, RedisService, HeartbeatModule, ServiceName } from '@gold-tracker/shared';
 import configuration from './config/configuration';
 import { validationSchema, validationOptions } from './config/validation';
 import { RedisThrottlerStorage } from './throttler/redis-throttler.storage';
+import { HttpThrottlerGuard } from './throttler/http-throttler.guard';
 import { CoreModule } from './core/core.module';
 import { AuthModule } from './auth/auth.module';
 import { ApiModule } from './api/api.module';
@@ -41,7 +42,7 @@ const pkg = require('../package.json');
   providers: [
     { provide: APP_FILTER, useClass: HttpExceptionFilter },
     { provide: APP_INTERCEPTOR, useClass: LoggingInterceptor },
-    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_GUARD, useClass: HttpThrottlerGuard },
   ],
 })
 export class AppModule {}

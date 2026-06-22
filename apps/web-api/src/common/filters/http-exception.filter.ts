@@ -13,6 +13,17 @@ export class HttpExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(HttpExceptionFilter.name);
 
   catch(exception: unknown, host: ArgumentsHost) {
+    // Hybrid app: this catch-all also wraps RMQ event handlers, where there is no
+    // HTTP response to write to. Those handlers ack their own messages, so just
+    // surface the error and bail rather than touching an Express response.
+    if (host.getType() !== 'http') {
+      this.logger.error(
+        'Non-HTTP handler error',
+        exception instanceof Error ? exception.stack : String(exception),
+      );
+      return;
+    }
+
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();

@@ -17,9 +17,26 @@ export class RedisThrottlerStorage implements ThrottlerStorage {
 
   constructor(private readonly redis: RedisService) {}
 
-  async increment(key: string, ttl: number): Promise<ThrottlerStorageRecord> {
+  async increment(
+    key: string,
+    ttl: number,
+    limit: number,
+    blockDuration: number,
+    throttlerName: string,
+  ): Promise<ThrottlerStorageRecord> {
     const result = await this.redis.throttleIncrement(`throttle:${key}`, ttl);
-    if (result) return result;
-    return this.fallback.increment(key, ttl);
+    if (result) {
+      // Block state is derived from the shared Redis counter so the decision is
+      // global across replicas: once the window's hits exceed the limit, the key
+      // is blocked until that window expires (matches the prior guard behaviour).
+      const isBlocked = result.totalHits > limit;
+      return {
+        totalHits: result.totalHits,
+        timeToExpire: result.timeToExpire,
+        isBlocked,
+        timeToBlockExpire: isBlocked ? result.timeToExpire : 0,
+      };
+    }
+    return this.fallback.increment(key, ttl, limit, blockDuration, throttlerName);
   }
 }

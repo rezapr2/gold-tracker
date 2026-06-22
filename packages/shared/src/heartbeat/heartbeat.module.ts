@@ -10,6 +10,7 @@ export class HeartbeatModule {
   static forRoot(options: HeartbeatOptions): DynamicModule {
     return {
       module: HeartbeatModule,
+      global: true,
       providers: [
         { provide: HEARTBEAT_OPTIONS, useValue: options },
         HeartbeatService,
