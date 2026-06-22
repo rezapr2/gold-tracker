@@ -1,8 +1,9 @@
 import { Module } from '@nestjs/common';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ScheduleModule } from '@nestjs/schedule';
-import { RedisModule, HeartbeatModule, ServiceName } from '@gold-tracker/shared';
+import { RedisModule, HeartbeatModule, ServiceName, RmqAckInterceptor } from '@gold-tracker/shared';
 import configuration from './config/configuration';
 import { validationSchema, validationOptions } from './config/validation';
 import { CoreModule } from './core/core.module';
@@ -40,5 +41,6 @@ const pkg = require('../package.json');
     SchedulerModule,
   ],
   controllers: [HealthController],
+  providers: [{ provide: APP_INTERCEPTOR, useClass: RmqAckInterceptor }],
 })
 export class AppModule {}

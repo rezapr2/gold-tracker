@@ -4,6 +4,7 @@ export * from './assets/asset.types';
 export * from './contracts/patterns';
 export * from './contracts/events';
 export * from './contracts/rmq';
+export * from './rmq/rmq-ack.interceptor';
 export * from './settings/settings-resolver';
 export * from './utils/circuit-breaker';
 export * from './utils/concurrency';
