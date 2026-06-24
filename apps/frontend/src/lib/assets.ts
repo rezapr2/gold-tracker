@@ -22,6 +22,11 @@ export interface AssetMeta {
   chartColor: string;
   /** Unique SVG gradient id (charts share one page). */
   gradientId: string;
+  /** Short element/ticker label shown inside the coin badge, e.g. "Au". */
+  badgeLabel: string;
+  /** Coin badge gradient stops (top highlight → bottom shade). */
+  badgeFrom: string;
+  badgeTo: string;
   category: AssetCategory;
   /** Pricing unit, e.g. troy ounce ("oz") or barrel ("bbl"). */
   unit: string;
@@ -39,6 +44,9 @@ export const ASSET_META: Record<AssetId, AssetMeta> = {
     accent: 'text-gold-400',
     chartColor: '#f59e0b',
     gradientId: 'grad-xau',
+    badgeLabel: 'Au',
+    badgeFrom: '#fde68a',
+    badgeTo: '#b45309',
     category: 'metal',
     unit: 'oz',
     unitLabel: 'per troy ounce',
@@ -51,6 +59,9 @@ export const ASSET_META: Record<AssetId, AssetMeta> = {
     accent: 'text-slate-300',
     chartColor: '#94a3b8',
     gradientId: 'grad-xag',
+    badgeLabel: 'Ag',
+    badgeFrom: '#f8fafc',
+    badgeTo: '#64748b',
     category: 'metal',
     unit: 'oz',
     unitLabel: 'per troy ounce',
@@ -60,6 +71,7 @@ export const ASSET_META: Record<AssetId, AssetMeta> = {
   // WTI: {
   //   name: 'Crude Oil (WTI)', symbol: 'WTI/USD', emoji: '🛢️',
   //   accent: 'text-zinc-300', chartColor: '#71717a', gradientId: 'grad-wti',
+  //   badgeLabel: 'Oil', badgeFrom: '#a1a1aa', badgeTo: '#3f3f46',
   //   category: 'energy', unit: 'bbl', unitLabel: 'per barrel', decimals: 2,
   // },
 };

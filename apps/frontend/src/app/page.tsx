@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { ArrowRight, LineChart, Radio } from 'lucide-react';
+import { ArrowRight, BellRing, CandlestickChart, LineChart, Radio, ShieldCheck } from 'lucide-react';
 import { PublicHeader } from '@/components/layout/PublicHeader';
 import { MarketTicker } from '@/components/widgets/MarketTicker';
 import { AssetPriceCard } from '@/components/widgets/AssetPriceCard';
@@ -48,7 +48,7 @@ export default function HomePage() {
           >
             <a
               href="#prices"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-gold-500 hover:bg-gold-600 text-gold-950 transition-colors"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-gold-500 hover:bg-gold-600 text-gold-950 shadow-lg shadow-gold-500/20 transition-colors"
             >
               <LineChart className="w-4 h-4" />
               View live prices
@@ -61,6 +61,25 @@ export default function HomePage() {
               <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
+
+          {/* Trust / capability signals — what you get, at a glance. */}
+          <ul
+            className="mt-9 flex flex-wrap items-center justify-center gap-x-5 gap-y-2.5 text-xs font-medium text-muted-foreground animate-fade-in-up"
+            style={{ animationDelay: '240ms' }}
+          >
+            <li className="flex items-center gap-1.5">
+              <CandlestickChart className="w-4 h-4 text-gold-400" />
+              Interactive charts &amp; history
+            </li>
+            <li className="flex items-center gap-1.5">
+              <BellRing className="w-4 h-4 text-gold-400" />
+              Telegram price alerts
+            </li>
+            <li className="flex items-center gap-1.5">
+              <ShieldCheck className="w-4 h-4 text-gold-400" />
+              Free · no account needed
+            </li>
+          </ul>
         </div>
       </section>
 

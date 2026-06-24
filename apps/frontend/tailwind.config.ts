@@ -81,6 +81,12 @@ const config: Config = {
           '0%, 100%': { opacity: '0.4' },
           '50%': { opacity: '0.75' },
         },
+        // Seamless left scroll for the market ticker. The track holds two copies
+        // of the content, so translating by -50% loops without a visible seam.
+        marquee: {
+          from: { transform: 'translateX(0)' },
+          to: { transform: 'translateX(-50%)' },
+        },
       },
       animation: {
         'pulse-gold': 'pulse-gold 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
@@ -90,6 +96,7 @@ const config: Config = {
         'flash-up': 'flash-up 0.7s ease-out',
         'flash-down': 'flash-down 0.7s ease-out',
         'glow-pulse': 'glow-pulse 4s ease-in-out infinite',
+        marquee: 'marquee 40s linear infinite',
       },
     },
   },

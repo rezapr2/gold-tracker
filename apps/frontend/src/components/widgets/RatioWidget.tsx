@@ -1,6 +1,7 @@
 'use client';
 import { Scale } from 'lucide-react';
 import { useGoldSilverRatio } from '@/hooks/useGoldPrice';
+import { AssetBadge } from '@/components/ui/asset-badge';
 import { formatPrice } from '@/lib/utils';
 
 /** Gold/Silver ratio banner — how many ounces of silver equal one of gold. */
@@ -28,13 +29,20 @@ export function RatioWidget() {
         </div>
       </div>
 
-      <div className="relative text-right shrink-0">
-        <p className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight tabular-nums">
-          {ratio.ratio.toFixed(1)}
-        </p>
-        <p className="text-xs text-muted-foreground mt-0.5 tabular-nums">
-          🥇 ${formatPrice(ratio.gold)} · 🥈 ${formatPrice(ratio.silver)}
-        </p>
+      <div className="relative flex items-center gap-3 sm:gap-4 shrink-0">
+        <div className="text-right">
+          <p className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight tabular-nums leading-none">
+            {ratio.ratio.toFixed(1)}
+          </p>
+          <div className="mt-1.5 flex items-center justify-end gap-2.5 text-xs text-muted-foreground tabular-nums">
+            <span className="flex items-center gap-1">
+              <AssetBadge asset="XAU" size="sm" />${formatPrice(ratio.gold)}
+            </span>
+            <span className="flex items-center gap-1">
+              <AssetBadge asset="XAG" size="sm" />${formatPrice(ratio.silver)}
+            </span>
+          </div>
+        </div>
       </div>
     </div>
   );

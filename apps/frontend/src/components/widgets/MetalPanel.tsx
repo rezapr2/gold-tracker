@@ -6,6 +6,7 @@ import { AnalyticsChart } from '@/components/charts/AnalyticsChart';
 import { useLatestPrice, usePriceHistory, useRecords } from '@/hooks/useGoldPrice';
 import { exportHistoryUrl } from '@/lib/api';
 import { formatPrice } from '@/lib/utils';
+import { AssetBadge } from '@/components/ui/asset-badge';
 import { Metal, METAL_META } from '@/lib/metals';
 import { TrendingUp, TrendingDown, Activity, Calendar, Download, Award, Anchor } from 'lucide-react';
 
@@ -23,8 +24,8 @@ export function MetalPanel({ metal }: MetalPanelProps) {
   return (
     <section className="space-y-5">
       <div className="flex items-center justify-between">
-        <h2 className="flex items-center gap-2 text-base font-semibold text-foreground">
-          <span>{meta.emoji}</span>
+        <h2 className="flex items-center gap-2.5 text-base font-semibold text-foreground">
+          <AssetBadge asset={metal} size="md" />
           <span>{meta.name}</span>
           <span className="text-xs font-normal text-muted-foreground">{meta.symbol}</span>
         </h2>

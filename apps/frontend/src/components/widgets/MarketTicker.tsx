@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { TrendingDown, TrendingUp } from 'lucide-react';
 import { useLatestPrice } from '@/hooks/useGoldPrice';
 import { AssetId, ASSETS, ASSET_META } from '@/lib/assets';
+import { AssetBadge } from '@/components/ui/asset-badge';
 import { cn, formatPrice, formatPercent } from '@/lib/utils';
 
 /** One asset cell in the ticker — live price that flashes on every tick. */
@@ -31,7 +32,7 @@ function TickerItem({ asset }: { asset: AssetId }) {
 
   return (
     <div className="flex items-center gap-2 whitespace-nowrap shrink-0">
-      <span className="text-sm">{meta.emoji}</span>
+      <AssetBadge asset={asset} size="sm" />
       <span className="text-xs font-semibold text-muted-foreground">{meta.symbol}</span>
       {stats ? (
         <>
@@ -61,21 +62,34 @@ function TickerItem({ asset }: { asset: AssetId }) {
   );
 }
 
-/** Horizontal strip of live asset prices. Auto-expands with the assets list. */
+/**
+ * Continuously scrolling strip of live asset prices. The track holds two
+ * identical halves so the -50% marquee loops seamlessly; it pauses on hover so
+ * users can read a quote, and freezes (readable) under prefers-reduced-motion.
+ */
 export function MarketTicker() {
+  // Repeat the asset list so even a 2-asset board fills the width before looping.
+  const repeat = Math.max(1, Math.ceil(8 / ASSETS.length));
+  const half = Array.from({ length: repeat }).flatMap(() => ASSETS);
+
   return (
-    <div className="border-b border-border bg-card/40 backdrop-blur-sm">
-      <div className="max-w-7xl mx-auto flex items-center gap-4 sm:gap-6 overflow-x-auto px-4 sm:px-6 py-2.5 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-        <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground whitespace-nowrap shrink-0">
-          <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75 animate-ping" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
-          </span>
-          Markets
+    <div className="relative border-b border-border bg-card/40 backdrop-blur-sm overflow-hidden">
+      {/* Pinned "Markets" label with a fade so quotes slide out cleanly under it. */}
+      <div className="absolute inset-y-0 left-0 z-10 flex items-center gap-1.5 pl-4 sm:pl-6 pr-10 bg-gradient-to-r from-background via-background/95 to-transparent">
+        <span className="relative flex h-2 w-2">
+          <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75 animate-ping" />
+          <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
         </span>
-        {ASSETS.map((asset) => (
-          <TickerItem key={asset} asset={asset} />
-        ))}
+        <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">Markets</span>
+      </div>
+
+      {/* Right edge fade for symmetry. */}
+      <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-12 bg-gradient-to-l from-background to-transparent" />
+
+      <div className="flex w-max items-center gap-8 py-2.5 pl-28 sm:pl-32 animate-marquee hover:[animation-play-state:paused]">
+        {[0, 1].map((copy) =>
+          half.map((asset, i) => <TickerItem key={`${copy}-${i}`} asset={asset} />),
+        )}
       </div>
     </div>
   );
