@@ -2,7 +2,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { TrendingDown, TrendingUp } from 'lucide-react';
 import { useLatestPrice } from '@/hooks/useGoldPrice';
-import { AssetId, ASSETS, ASSET_META } from '@/lib/assets';
+import { AssetId, ASSET_META } from '@/lib/assets';
+import { useEnabledAssets } from '@/hooks/useEnabledAssets';
 import { AssetBadge } from '@/components/ui/asset-badge';
 import { cn, formatPrice, formatPercent } from '@/lib/utils';
 
@@ -68,9 +69,11 @@ function TickerItem({ asset }: { asset: AssetId }) {
  * users can read a quote, and freezes (readable) under prefers-reduced-motion.
  */
 export function MarketTicker() {
+  const assets = useEnabledAssets();
+  if (assets.length === 0) return null;
   // Repeat the asset list so even a 2-asset board fills the width before looping.
-  const repeat = Math.max(1, Math.ceil(8 / ASSETS.length));
-  const half = Array.from({ length: repeat }).flatMap(() => ASSETS);
+  const repeat = Math.max(1, Math.ceil(8 / assets.length));
+  const half = Array.from({ length: repeat }).flatMap(() => assets);
 
   return (
     <div className="relative border-b border-border bg-card/40 backdrop-blur-sm overflow-hidden">

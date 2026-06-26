@@ -5,10 +5,13 @@ import { PublicHeader } from '@/components/layout/PublicHeader';
 import { MarketTicker } from '@/components/widgets/MarketTicker';
 import { AssetPriceCard } from '@/components/widgets/AssetPriceCard';
 import { RatioWidget } from '@/components/widgets/RatioWidget';
-import { ASSETS, SHOW_GOLD_SILVER_RATIO } from '@/lib/assets';
+import { SHOW_GOLD_SILVER_RATIO } from '@/lib/assets';
+import { useEnabledAssets } from '@/hooks/useEnabledAssets';
 
 /** Public, read-only homepage: live prices, ratio and charts. No auth required. */
 export default function HomePage() {
+  const assets = useEnabledAssets();
+  const showRatio = SHOW_GOLD_SILVER_RATIO && assets.includes('XAU') && assets.includes('XAG');
   return (
     <div className="min-h-screen bg-background">
       <PublicHeader />
@@ -84,7 +87,7 @@ export default function HomePage() {
       </section>
 
       <main id="prices" className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-10 space-y-6 scroll-mt-20">
-        {SHOW_GOLD_SILVER_RATIO && (
+        {showRatio && (
           <div className="animate-fade-in-up" style={{ animationDelay: '80ms' }}>
             <RatioWidget />
           </div>
@@ -93,7 +96,7 @@ export default function HomePage() {
         {/* Each tracked asset gets a live price tile that links to its full
             detail page (charts, stats and history). */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-          {ASSETS.map((asset, i) => (
+          {assets.map((asset, i) => (
             <div
               key={asset}
               className="animate-fade-in-up"

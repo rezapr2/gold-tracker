@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation';
 import {
   BarChart3,
   Bot,
+  Coins,
   Globe,
   Home,
   LogOut,
@@ -17,6 +18,7 @@ import { useAuthStore } from '@/store/auth.store';
 const navItems = [
   { href: '/admin', icon: Home, label: 'Dashboard' },
   { href: '/admin/analytics', icon: BarChart3, label: 'Analytics' },
+  { href: '/admin/assets', icon: Coins, label: 'Assets' },
   { href: '/admin/services', icon: Server, label: 'Services' },
   { href: '/admin/telegram', icon: Bot, label: 'Telegram' },
   { href: '/admin/settings', icon: Settings, label: 'Settings' },
