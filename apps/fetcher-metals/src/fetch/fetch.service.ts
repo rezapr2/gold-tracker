@@ -8,6 +8,7 @@ import {
   PriceFetchedEvent,
   Asset,
   assetsForProvider,
+  ServiceName,
   CircuitBreaker,
   mapWithConcurrency,
   RedisService,
@@ -79,8 +80,17 @@ export class FetchService implements OnApplicationBootstrap {
 
   @Cron('*/1 * * * *', { name: CRON_NAME })
   async fetchPrices(): Promise<void> {
+    if (!(await this.settings.isFetcherEnabled(ServiceName.FetcherMetals))) {
+      this.logger.debug('fetch-metals paused by admin — skipping tick');
+      return;
+    }
+    const assets = await this.settings.enabledAssets(this.assets);
+    if (assets.length === 0) {
+      this.logger.debug('fetch-metals: all assets disabled — skipping tick');
+      return;
+    }
     const run = async () => {
-      await mapWithConcurrency(this.assets, FETCH_CONCURRENCY, async (asset) => {
+      await mapWithConcurrency(assets, FETCH_CONCURRENCY, async (asset) => {
         try {
           const data = await this.fetchOne(asset);
           if (data) {

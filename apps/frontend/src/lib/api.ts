@@ -88,3 +88,16 @@ export const settingsApi = {
 export const servicesApi = {
   list: () => api.get('/admin/services'),
 };
+
+/** Public list of currently-enabled assets (used to hide disabled ones). */
+export const assetsApi = {
+  list: () => api.get('/assets'),
+};
+
+/** Admin asset/fetcher catalog + enable/disable toggles. */
+export const catalogApi = {
+  get: () => api.get('/admin/catalog'),
+  setAsset: (code: string, enabled: boolean) => api.patch(`/admin/assets/${code}`, { enabled }),
+  setFetcher: (service: string, enabled: boolean) =>
+    api.patch(`/admin/fetchers/${service}`, { enabled }),
+};

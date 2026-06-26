@@ -1,4 +1,4 @@
-import { Asset, getAsset } from '../assets/asset.types';
+import { Asset, getAsset, ASSET_CODES, fetcherForAsset } from '../assets/asset.types';
 
 /** Plain shape of the persisted `bot_settings` doc (framework-agnostic). */
 export interface BotSettingsData {
@@ -17,6 +17,10 @@ export interface BotSettingsData {
   twelveDataKey?: string;
   alphaVantageKey?: string;
   dataRetentionDays?: number;
+  /** Asset codes the admin has switched off (not fetched, hidden from the site). */
+  disabledAssets?: string[];
+  /** Fetcher service names the admin has paused (their whole asset set goes off). */
+  disabledFetchers?: string[];
 }
 
 export type ApiProvider = 'goldapi' | 'metalsDev' | 'twelveData' | 'alphaVantage';
@@ -112,5 +116,41 @@ export class SettingsResolver {
   async dataRetentionDays(): Promise<number> {
     const s = await this.get();
     return s?.dataRetentionDays ?? 90;
+  }
+
+  // ---- Asset / fetcher enable state -------------------------------------
+  async disabledAssets(): Promise<string[]> {
+    const s = await this.get();
+    return s?.disabledAssets ?? [];
+  }
+
+  async disabledFetchers(): Promise<string[]> {
+    const s = await this.get();
+    return s?.disabledFetchers ?? [];
+  }
+
+  /** A fetcher is active unless the admin has paused it. */
+  async isFetcherEnabled(service: string): Promise<boolean> {
+    const s = await this.get();
+    return !(s?.disabledFetchers ?? []).includes(service);
+  }
+
+  /** An asset is active unless it's individually disabled or its fetcher is off. */
+  async isAssetEnabled(code: string): Promise<boolean> {
+    const s = await this.get();
+    if ((s?.disabledAssets ?? []).includes(code)) return false;
+    const fetcher = fetcherForAsset(code);
+    if (fetcher && (s?.disabledFetchers ?? []).includes(fetcher)) return false;
+    return true;
+  }
+
+  /** Subset of `codes` that are currently active (defaults to the whole registry). */
+  async enabledAssets(codes: Asset[] = ASSET_CODES): Promise<Asset[]> {
+    const s = await this.get();
+    const disabledAssets = new Set(s?.disabledAssets ?? []);
+    const disabledFetchers = new Set(s?.disabledFetchers ?? []);
+    return codes.filter(
+      (c) => !disabledAssets.has(c) && !disabledFetchers.has(fetcherForAsset(c) ?? ''),
+    );
   }
 }

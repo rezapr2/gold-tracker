@@ -35,6 +35,12 @@ export class IngestController {
     const channel = ctx.getChannelRef();
     const message = ctx.getMessage();
     try {
+      // Defensive: a disabled asset must never be persisted, even if a fetcher
+      // is mid-cycle when it's switched off. Ack so the message is consumed.
+      if (!(await this.settings.isAssetEnabled(evt.asset))) {
+        channel.ack(message);
+        return;
+      }
       const saved = await this.price.ingestPrice({
         price: evt.price,
         currency: evt.currency,

@@ -85,4 +85,7 @@ export class SettingsService implements OnModuleInit {
   priceFetchInterval(): Promise<string> {
     return this.resolver.priceFetchInterval();
   }
+  isAssetEnabled(code: string): Promise<boolean> {
+    return this.resolver.isAssetEnabled(code);
+  }
 }

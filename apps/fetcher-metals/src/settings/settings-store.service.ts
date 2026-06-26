@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom, timeout } from 'rxjs';
-import { EVENTS_CLIENT, Rpc, SettingsResolver, BotSettingsData, ApiProvider } from '@gold-tracker/shared';
+import { EVENTS_CLIENT, Rpc, SettingsResolver, BotSettingsData, ApiProvider, Asset } from '@gold-tracker/shared';
 
 /**
  * RPC-backed settings, used by the providers in place of the monolith's
@@ -34,5 +34,13 @@ export class SettingsStoreService {
 
   priceFetchInterval(): Promise<string> {
     return this.resolver.priceFetchInterval();
+  }
+
+  isFetcherEnabled(service: string): Promise<boolean> {
+    return this.resolver.isFetcherEnabled(service);
+  }
+
+  enabledAssets(codes: Asset[]): Promise<Asset[]> {
+    return this.resolver.enabledAssets(codes);
   }
 }

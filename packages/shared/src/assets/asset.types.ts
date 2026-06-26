@@ -175,6 +175,39 @@ export function assetsForProvider(provider: string): Asset[] {
 }
 
 // ---------------------------------------------------------------------------
+// Fetcher registry — the deployable fetcher services and the asset set each one
+// owns. A fetcher fetches every asset its representative `provider` declares
+// support for. Used by the admin catalog (to group assets by fetcher and toggle
+// a whole fetcher) and by each fetcher to resolve its own asset list.
+// `service` matches the ServiceName enum / docker-compose service name; kept as
+// a string literal here to avoid a circular import from the contracts layer.
+// ---------------------------------------------------------------------------
+export interface FetcherDef {
+  /** Service name, e.g. "fetcher-metals" (matches ServiceName). */
+  service: string;
+  /** Human label for the admin UI. */
+  label: string;
+  /** Representative provider whose supported assets this fetcher owns. */
+  provider: string;
+}
+
+export const FETCHERS: FetcherDef[] = [
+  { service: 'fetcher-metals', label: 'USD Metals', provider: 'goldapicom' },
+  { service: 'fetcher-estjt', label: 'Iranian Market (estjt.ir)', provider: 'estjt' },
+];
+
+/** Assets owned by a fetcher (everything its representative provider serves). */
+export function assetsForFetcher(service: string): Asset[] {
+  const def = FETCHERS.find((f) => f.service === service);
+  return def ? assetsForProvider(def.provider) : [];
+}
+
+/** The fetcher service that owns a given asset, if any. */
+export function fetcherForAsset(code: Asset): string | undefined {
+  return FETCHERS.find((f) => assetsForProvider(f.provider).includes(code))?.service;
+}
+
+// ---------------------------------------------------------------------------
 // Legacy aliases — deprecated, prefer the Asset* names above.
 // ---------------------------------------------------------------------------
 /** @deprecated use {@link Asset} */

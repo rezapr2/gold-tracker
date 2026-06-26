@@ -57,6 +57,16 @@ export class BotSettings {
 
   @Prop({ default: 90, type: Number })
   dataRetentionDays: number;
+
+  // Asset codes the admin switched off — not fetched, not persisted, hidden from
+  // the public site. Empty by default (everything in the registry is on).
+  @Prop({ type: [String], default: [] })
+  disabledAssets: string[];
+
+  // Fetcher service names the admin paused — the whole fetcher stops fetching and
+  // all its assets go off.
+  @Prop({ type: [String], default: [] })
+  disabledFetchers: string[];
 }
 
 export const BotSettingsSchema = SchemaFactory.createForClass(BotSettings);

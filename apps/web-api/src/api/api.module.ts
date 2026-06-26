@@ -3,7 +3,9 @@ import { PricesController } from './prices.controller';
 import { AnalyticsController } from './analytics.controller';
 import { SettingsController } from './settings.controller';
 import { TelegramController } from './telegram.controller';
+import { AssetsController } from './assets.controller';
 import { ServicesController } from '../admin/services.controller';
+import { CatalogController } from '../admin/catalog.controller';
 import { WsEventsController } from '../websocket/ws-events.controller';
 import { WebsocketModule } from '../websocket/websocket.module';
 
@@ -15,7 +17,9 @@ import { WebsocketModule } from '../websocket/websocket.module';
     AnalyticsController,
     SettingsController,
     TelegramController,
+    AssetsController,
     ServicesController,
+    CatalogController,
     WsEventsController,
   ],
 })
