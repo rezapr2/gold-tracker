@@ -251,7 +251,7 @@ docker compose -f docker-compose.prod.yml up -d --build
 
 # 3. Confirm everything is healthy
 docker compose -f docker-compose.prod.yml ps
-docker compose -f docker-compose.prod.yml logs -f --tail=50 backend
+docker compose -f docker-compose.prod.yml logs -f --tail=50 web-api
 
 # 4. Reclaim disk from old image layers
 docker image prune -f
@@ -267,7 +267,7 @@ That's the whole update loop. A few notes:
 - **Nginx config changes** (`docker/nginx/*.conf`) — the files are bind-mounted,
   so just reload: `docker compose -f docker-compose.prod.yml restart nginx`
 - **Rebuild a single service** instead of all:
-  `docker compose -f docker-compose.prod.yml up -d --build backend`
+  `docker compose -f docker-compose.prod.yml up -d --build web-api`
 
 ### Roll back
 
@@ -289,11 +289,11 @@ C="docker compose -f docker-compose.prod.yml"   # shorthand
 $C ps                       # status of all services
 $C logs -f web-api          # follow web-api logs
 $C logs --tail=100 nginx    # last 100 nginx lines
-$C restart backend          # restart one service
+$C restart web-api          # restart one service (web-api, core, fetcher-metals, …)
 $C stop                     # stop everything (keeps data)
 $C start                    # start again
 $C down                     # stop + remove containers (keeps named volumes)
-$C exec backend sh          # shell inside the backend container
+$C exec web-api sh          # shell inside the web-api container
 $C exec mongodb mongosh -u "$MONGO_ROOT_USER" -p "$MONGO_ROOT_PASSWORD" --authenticationDatabase admin
 ```
 
@@ -360,11 +360,11 @@ cat backup-YYYY-MM-DD.archive | docker compose -f docker-compose.prod.yml exec -
 
 | Symptom | Check |
 |---|---|
-| `502 Bad Gateway` | Backend/frontend not up yet or crashed: `... logs backend`, `... ps`. |
+| `502 Bad Gateway` | `web-api`/frontend not up yet or crashed: `... logs web-api`, `... ps`. |
 | Nginx won't start, cert error | TLS cert missing or domain mismatch. Confirm `/etc/letsencrypt/live/<domain>/` exists and `default.conf` uses the same domain (§3.4–3.5). |
 | `MONGODB_URI` auth fails | Root `.env` `MONGO_ROOT_USER`/`PASSWORD` changed **after** the volume was created. Mongo credentials are fixed at first init — either use the original creds or recreate the volume (`down -v`, destroys data). |
 | Frontend shows wrong API URL | `NEXT_PUBLIC_*` is build-time. Fix the root `.env`, then `up -d --build frontend`. |
-| Prices not updating | Provider errors in `... logs backend`. See [§8.1](#81-price-providers--rate-limits) — usually the fetch interval is too aggressive for free API tiers. |
+| Prices not updating | Provider errors in `... logs fetcher-metals` (USD metals) or `... logs fetcher-estjt` (IR_* prices). See [§8.1](#81-price-providers--rate-limits) — usually the fetch interval is too aggressive for free API tiers. |
 | Changes to `.env` ignored | `... up -d --force-recreate`. |
 | Out of disk | `docker image prune -f` and `docker system df`. |
 
@@ -430,7 +430,8 @@ Differences from the full-stack steps above:
    FRONTEND_URL=https://your-frontend.vercel.app
    ```
 
-2. **Backend `.env`** — same as §3.3; set `FRONTEND_URL` to the Vercel origin.
+2. **App config** — all in the single root `.env` (§3.2); set `FRONTEND_URL` to the
+   Vercel origin for CORS. (There's no separate per-backend `.env` anymore.)
 
 3. **Nginx** — `api.conf` listens on `:80` and needs no domain edit or TLS for a
    plain API. To serve the API over HTTPS, add a `443` server block (mirror
