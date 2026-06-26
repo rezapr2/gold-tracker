@@ -8,6 +8,7 @@ dist/
 .next/
 out/
 build/
+.claude/
 
 # Environment files
 .env
@@ -47,3 +48,5 @@ coverage/
 
 # Docker volumes (local)
 docker/mongo/data/
+
+
