@@ -9,12 +9,13 @@ and the Compose plugin. Data lives in named Docker volumes (`mongo_data`,
 data if you explicitly delete the volumes.
 
 > **Architecture (microservices).** The former single `backend` container is now
-> five independently deployable services talking over a **RabbitMQ** broker:
+> six independently deployable services talking over a **RabbitMQ** broker:
 >
 > | Service | Role |
 > |---|---|
 > | `fetcher-metals` | fetches XAU/XAG from the USD price APIs |
 > | `fetcher-estjt` | scrapes the Iranian coin/gram-gold (IR_*) prices |
+> | `fetcher-oil` | fetches WTI/Brent crude (USD/barrel) from Twelve Data |
 > | `core` | owns MongoDB — persists prices, aggregates, settings, service registry; answers read RPCs |
 > | `web-api` | the HTTP + WebSocket gateway the site/Nginx talks to (port `3001`) |
 > | `telegram-bot` | the Telegram publishers |
@@ -32,8 +33,8 @@ data if you explicitly delete the volumes.
 
 | File | What it runs | Use when |
 |---|---|---|
-| `docker-compose.prod.yml` | **Full stack** — MongoDB, Redis, RabbitMQ, the 5 services, frontend, Nginx (HTTP/HTTPS) | One server hosts the whole site (dashboard + API). **Default — start here.** |
-| `docker-compose.vm.yml` | **Backend only** — MongoDB, Redis, RabbitMQ, the 5 services, Nginx (API + WebSocket) | Frontend is hosted separately (e.g. Vercel); the VM serves only the API. See [Appendix A](#appendix-a--backend-only-vm-deployment). |
+| `docker-compose.prod.yml` | **Full stack** — MongoDB, Redis, RabbitMQ, the 6 services, frontend, Nginx (HTTP/HTTPS) | One server hosts the whole site (dashboard + API). **Default — start here.** |
+| `docker-compose.vm.yml` | **Backend only** — MongoDB, Redis, RabbitMQ, the 6 services, Nginx (API + WebSocket) | Frontend is hosted separately (e.g. Vercel); the VM serves only the API. See [Appendix A](#appendix-a--backend-only-vm-deployment). |
 | `docker-compose.yml` | Local dev (ports exposed, no auth, hot reload) | **Not for production.** |
 
 This guide uses `docker-compose.prod.yml` unless stated otherwise.
@@ -65,7 +66,7 @@ and Redis are reachable only on the internal Docker network.
 - **Server:** Ubuntu 22.04 LTS or newer, ≥ 2 GB RAM, ≥ 20 GB disk, root/sudo access.
 - **Domain:** a DNS **A record** pointing your domain (e.g. `aprice.online`) at the server's public IP. Required before issuing TLS certificates.
 - **Firewall:** allow SSH (22), HTTP (80), HTTPS (443).
-- **API keys:** at least one gold-price provider key (GoldAPI / Metals.dev / TwelveData / AlphaVantage). Telegram tokens are optional.
+- **API keys:** at least one gold-price provider key (GoldAPI / Metals.dev / TwelveData / AlphaVantage). Crude oil (WTI/Brent) is served **only** by Twelve Data, so `fetcher-oil` needs `TWELVE_DATA_KEY` to report prices. Telegram tokens are optional.
 
 ### 2.1 Open the firewall (UFW)
 

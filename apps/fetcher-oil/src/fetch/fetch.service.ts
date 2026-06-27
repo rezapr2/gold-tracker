@@ -15,19 +15,15 @@ import {
   HeartbeatService,
 } from '@gold-tracker/shared';
 import { PriceProvider, GoldPriceData } from '../providers/price-provider.interface';
-import { GoldApiComProvider } from '../providers/gold-api-com.provider';
-import { GoldApiProvider } from '../providers/goldapi.provider';
-import { MetalsDevProvider } from '../providers/metals-dev.provider';
 import { TwelveDataProvider } from '../providers/twelve-data.provider';
-import { AlphaVantageProvider } from '../providers/alpha-vantage.provider';
 import { SettingsStoreService } from '../settings/settings-store.service';
 
-const FETCH_CONCURRENCY = 4;
-const CRON_NAME = 'fetchMetals';
+const FETCH_CONCURRENCY = 2;
+const CRON_NAME = 'fetchOil';
 
 /**
- * Runs the USD-metal provider failover loop on a schedule and publishes a
- * `price.fetched` event per asset. No DB — core persists. A cross-instance Redis
+ * Runs the crude-oil provider loop on a schedule and publishes a `price.fetched`
+ * event per benchmark (WTI, Brent). No DB — core persists. A cross-instance Redis
  * lock keeps a single replica fetching per tick; the cron interval follows the
  * admin setting and is re-applied on `settings.changed`.
  */
@@ -36,23 +32,19 @@ export class FetchService implements OnApplicationBootstrap {
   private readonly logger = new Logger(FetchService.name);
   private readonly breaker = new CircuitBreaker();
   private readonly providers: PriceProvider[];
-  // Assets this fetcher owns, per the registry (XAU, XAG).
-  private readonly assets: Asset[] = assetsForFetcher(ServiceName.FetcherMetals);
+  // Assets this fetcher owns, per the registry (WTI, BRENT).
+  private readonly assets: Asset[] = assetsForFetcher(ServiceName.FetcherOil);
   private readonly lastFetch: Record<string, string> = {};
 
   constructor(
-    goldApiCom: GoldApiComProvider,
-    goldApi: GoldApiProvider,
-    metalsDev: MetalsDevProvider,
     twelveData: TwelveDataProvider,
-    alphaVantage: AlphaVantageProvider,
     private readonly settings: SettingsStoreService,
     private readonly schedulerRegistry: SchedulerRegistry,
     private readonly heartbeat: HeartbeatService,
     @Inject(EVENTS_CLIENT) private readonly events: ClientProxy,
     @Optional() private readonly redis?: RedisService,
   ) {
-    this.providers = [goldApiCom, goldApi, metalsDev, twelveData, alphaVantage];
+    this.providers = [twelveData];
   }
 
   async onApplicationBootstrap(): Promise<void> {
@@ -80,13 +72,13 @@ export class FetchService implements OnApplicationBootstrap {
 
   @Cron('*/1 * * * *', { name: CRON_NAME })
   async fetchPrices(): Promise<void> {
-    if (!(await this.settings.isFetcherEnabled(ServiceName.FetcherMetals))) {
-      this.logger.debug('fetch-metals paused by admin — skipping tick');
+    if (!(await this.settings.isFetcherEnabled(ServiceName.FetcherOil))) {
+      this.logger.debug('fetch-oil paused by admin — skipping tick');
       return;
     }
     const assets = await this.settings.enabledAssets(this.assets);
     if (assets.length === 0) {
-      this.logger.debug('fetch-metals: all assets disabled — skipping tick');
+      this.logger.debug('fetch-oil: all assets disabled — skipping tick');
       return;
     }
     const run = async () => {
@@ -103,8 +95,8 @@ export class FetchService implements OnApplicationBootstrap {
       });
     };
     if (this.redis) {
-      const ran = await this.redis.runExclusive('cron-lock:fetch-metals', 50_000, run);
-      if (!ran) this.logger.debug('fetch-metals skipped — another replica holds the lock');
+      const ran = await this.redis.runExclusive('cron-lock:fetch-oil', 50_000, run);
+      if (!ran) this.logger.debug('fetch-oil skipped — another replica holds the lock');
     } else {
       await run();
     }

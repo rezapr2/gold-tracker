@@ -7,7 +7,7 @@ import {
   RoutingKey,
   PriceFetchedEvent,
   Asset,
-  assetsForProvider,
+  assetsForFetcher,
   ServiceName,
   mapWithConcurrency,
   RedisService,
@@ -27,7 +27,7 @@ const CRON_NAME = 'fetchEstjt';
 @Injectable()
 export class FetchService implements OnApplicationBootstrap {
   private readonly logger = new Logger(FetchService.name);
-  private readonly assets: Asset[] = assetsForProvider('estjt');
+  private readonly assets: Asset[] = assetsForFetcher(ServiceName.FetcherEstjt);
   private readonly lastFetch: Record<string, string> = {};
 
   constructor(

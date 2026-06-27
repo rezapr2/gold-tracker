@@ -10,6 +10,7 @@ export enum ServiceName {
   Core = 'core',
   FetcherMetals = 'fetcher-metals',
   FetcherEstjt = 'fetcher-estjt',
+  FetcherOil = 'fetcher-oil',
   WebApi = 'web-api',
   TelegramBot = 'telegram-bot',
 }
@@ -38,6 +39,7 @@ export const Queue = {
   TelegramBot: 'telegram.in',
   FetcherMetals: 'fetcher-metals.in',
   FetcherEstjt: 'fetcher-estjt.in',
+  FetcherOil: 'fetcher-oil.in',
 } as const;
 
 /** Which routing keys each service's queue subscribes to. */
@@ -47,6 +49,7 @@ export const QUEUE_BINDINGS: Record<string, RoutingKey[]> = {
   [Queue.TelegramBot]: [RoutingKey.PriceSaved, RoutingKey.PriceAlert, RoutingKey.SettingsChanged],
   [Queue.FetcherMetals]: [RoutingKey.SettingsChanged],
   [Queue.FetcherEstjt]: [RoutingKey.SettingsChanged],
+  [Queue.FetcherOil]: [RoutingKey.SettingsChanged],
 };
 
 /** RPC message patterns core answers (request/response over RabbitMQ). */

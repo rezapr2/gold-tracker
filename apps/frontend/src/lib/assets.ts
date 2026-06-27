@@ -5,10 +5,10 @@
 // use the Asset* names. To add a new instrument (e.g. oil), add its id to
 // `ASSETS` and a matching entry in `ASSET_META` — the UI fans out automatically.
 
-export type AssetId = 'XAU' | 'XAG';
+export type AssetId = 'XAU' | 'XAG' | 'WTI' | 'BRENT';
 export type AssetCategory = 'metal' | 'energy';
 
-export const ASSETS: AssetId[] = ['XAU', 'XAG'];
+export const ASSETS: AssetId[] = ['XAU', 'XAG', 'WTI', 'BRENT'];
 
 export const DEFAULT_ASSET: AssetId = 'XAU';
 
@@ -67,13 +67,36 @@ export const ASSET_META: Record<AssetId, AssetMeta> = {
     unitLabel: 'per troy ounce',
     decimals: 2,
   },
-  // Example of a future asset (left commented as a template):
-  // WTI: {
-  //   name: 'Crude Oil (WTI)', symbol: 'WTI/USD', emoji: '🛢️',
-  //   accent: 'text-zinc-300', chartColor: '#71717a', gradientId: 'grad-wti',
-  //   badgeLabel: 'Oil', badgeFrom: '#a1a1aa', badgeTo: '#3f3f46',
-  //   category: 'energy', unit: 'bbl', unitLabel: 'per barrel', decimals: 2,
-  // },
+  WTI: {
+    name: 'Crude Oil (WTI)',
+    symbol: 'WTI/USD',
+    emoji: '🛢️',
+    accent: 'text-amber-700',
+    chartColor: '#b45309',
+    gradientId: 'grad-wti',
+    badgeLabel: 'WTI',
+    badgeFrom: '#a16207',
+    badgeTo: '#451a03',
+    category: 'energy',
+    unit: 'bbl',
+    unitLabel: 'per barrel',
+    decimals: 2,
+  },
+  BRENT: {
+    name: 'Crude Oil (Brent)',
+    symbol: 'BRENT/USD',
+    emoji: '🛢️',
+    accent: 'text-stone-400',
+    chartColor: '#57534e',
+    gradientId: 'grad-brent',
+    badgeLabel: 'BRT',
+    badgeFrom: '#78716c',
+    badgeTo: '#1c1917',
+    category: 'energy',
+    unit: 'bbl',
+    unitLabel: 'per barrel',
+    decimals: 2,
+  },
 };
 
 export function isAsset(value: unknown): value is AssetId {

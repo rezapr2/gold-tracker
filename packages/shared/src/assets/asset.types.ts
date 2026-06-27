@@ -20,6 +20,13 @@ export interface AssetDef {
   unit: string;
   /** Quote currency, e.g. "USD". */
   quoteCurrency: string;
+  /**
+   * The fetcher service that owns this asset (a {@link ServiceName} value, kept
+   * as a string to avoid a circular import). Declared explicitly because some
+   * providers (e.g. Twelve Data) serve assets across multiple fetchers, so the
+   * owning service can't be inferred from `providers` alone.
+   */
+  fetcher: string;
   /** Provider names (see provider `name`s) able to serve this asset. */
   providers: string[];
   /**
@@ -41,6 +48,7 @@ export const ASSETS: Record<string, AssetDef> = {
     emoji: '🥇',
     unit: 'oz',
     quoteCurrency: 'USD',
+    fetcher: 'fetcher-metals',
     providers: ['goldapicom', 'goldapi', 'metalsdev', 'twelvedata', 'alphavantage'],
     telegram: { tokenEnv: 'TELEGRAM_BOT_TOKEN', channelEnv: 'TELEGRAM_CHANNEL_ID' },
     command: 'gold',
@@ -52,9 +60,41 @@ export const ASSETS: Record<string, AssetDef> = {
     emoji: '🥈',
     unit: 'oz',
     quoteCurrency: 'USD',
+    fetcher: 'fetcher-metals',
     providers: ['goldapicom', 'goldapi', 'metalsdev', 'twelvedata', 'alphavantage'],
     telegram: { tokenEnv: 'TELEGRAM_SILVER_BOT_TOKEN', channelEnv: 'TELEGRAM_SILVER_CHANNEL_ID' },
     command: 'silver',
+  },
+
+  // ---------------------------------------------------------------------------
+  // Crude oil benchmarks (USD/barrel). Served by Twelve Data's spot `price`
+  // endpoint via the dedicated `fetcher-oil` service. AlphaVantage is omitted —
+  // its oil data comes from a different (daily-only) commodity endpoint, not the
+  // real-time CURRENCY_EXCHANGE_RATE path the metals providers use.
+  // ---------------------------------------------------------------------------
+  WTI: {
+    code: 'WTI',
+    name: 'Crude Oil (WTI)',
+    category: 'energy',
+    emoji: '🛢️',
+    unit: 'barrel',
+    quoteCurrency: 'USD',
+    fetcher: 'fetcher-oil',
+    providers: ['twelvedata'],
+    providerSymbols: { twelvedata: 'WTI/USD' },
+    command: 'oil',
+  },
+  BRENT: {
+    code: 'BRENT',
+    name: 'Crude Oil (Brent)',
+    category: 'energy',
+    emoji: '🛢️',
+    unit: 'barrel',
+    quoteCurrency: 'USD',
+    fetcher: 'fetcher-oil',
+    providers: ['twelvedata'],
+    providerSymbols: { twelvedata: 'BRENT/USD' },
+    command: 'brent',
   },
 
   // ---------------------------------------------------------------------------
@@ -71,6 +111,7 @@ export const ASSETS: Record<string, AssetDef> = {
     emoji: '🪙',
     unit: 'coin',
     quoteCurrency: 'TOMAN',
+    fetcher: 'fetcher-estjt',
     providers: ['estjt'],
     providerSymbols: { estjt: 'سکه طرح جدید' },
   },
@@ -81,6 +122,7 @@ export const ASSETS: Record<string, AssetDef> = {
     emoji: '🪙',
     unit: 'coin',
     quoteCurrency: 'TOMAN',
+    fetcher: 'fetcher-estjt',
     providers: ['estjt'],
     providerSymbols: { estjt: 'سکه طرح قدیم' },
   },
@@ -91,6 +133,7 @@ export const ASSETS: Record<string, AssetDef> = {
     emoji: '🪙',
     unit: 'coin',
     quoteCurrency: 'TOMAN',
+    fetcher: 'fetcher-estjt',
     providers: ['estjt'],
     providerSymbols: { estjt: 'نیم سکه' },
   },
@@ -101,6 +144,7 @@ export const ASSETS: Record<string, AssetDef> = {
     emoji: '🪙',
     unit: 'coin',
     quoteCurrency: 'TOMAN',
+    fetcher: 'fetcher-estjt',
     providers: ['estjt'],
     providerSymbols: { estjt: 'ربع سکه' },
   },
@@ -111,6 +155,7 @@ export const ASSETS: Record<string, AssetDef> = {
     emoji: '⚖️',
     unit: 'mesghal',
     quoteCurrency: 'TOMAN',
+    fetcher: 'fetcher-estjt',
     providers: ['estjt'],
     providerSymbols: { estjt: 'مظنه تهران' },
   },
@@ -121,6 +166,7 @@ export const ASSETS: Record<string, AssetDef> = {
     emoji: '🥇',
     unit: 'gram',
     quoteCurrency: 'TOMAN',
+    fetcher: 'fetcher-estjt',
     providers: ['estjt'],
     providerSymbols: { estjt: 'طلا 18 عیار' },
   },
@@ -131,6 +177,7 @@ export const ASSETS: Record<string, AssetDef> = {
     emoji: '🥇',
     unit: 'gram',
     quoteCurrency: 'TOMAN',
+    fetcher: 'fetcher-estjt',
     providers: ['estjt'],
     providerSymbols: { estjt: 'طلا 24 عیار' },
   },
@@ -187,24 +234,22 @@ export interface FetcherDef {
   service: string;
   /** Human label for the admin UI. */
   label: string;
-  /** Representative provider whose supported assets this fetcher owns. */
-  provider: string;
 }
 
 export const FETCHERS: FetcherDef[] = [
-  { service: 'fetcher-metals', label: 'USD Metals', provider: 'goldapicom' },
-  { service: 'fetcher-estjt', label: 'Iranian Market (estjt.ir)', provider: 'estjt' },
+  { service: 'fetcher-metals', label: 'USD Metals' },
+  { service: 'fetcher-estjt', label: 'Iranian Market (estjt.ir)' },
+  { service: 'fetcher-oil', label: 'Crude Oil' },
 ];
 
-/** Assets owned by a fetcher (everything its representative provider serves). */
+/** Assets owned by a fetcher (those whose registry `fetcher` names this service). */
 export function assetsForFetcher(service: string): Asset[] {
-  const def = FETCHERS.find((f) => f.service === service);
-  return def ? assetsForProvider(def.provider) : [];
+  return ASSET_CODES.filter((code) => ASSETS[code].fetcher === service);
 }
 
-/** The fetcher service that owns a given asset, if any. */
+/** The fetcher service that owns a given asset. */
 export function fetcherForAsset(code: Asset): string | undefined {
-  return FETCHERS.find((f) => assetsForProvider(f.provider).includes(code))?.service;
+  return ASSETS[code]?.fetcher;
 }
 
 // ---------------------------------------------------------------------------

@@ -96,6 +96,16 @@ services:
       rabbitmq: { condition: service_healthy }
     deploy: { resources: { limits: { memory: 256M } } }
 
+  fetcher-oil:
+    <<: *svc-common
+    build: { context: ., dockerfile: apps/fetcher-oil/Dockerfile, target: run }
+    container_name: gold-tracker-fetcher-oil
+    environment: { <<: *rabbit-env }
+    depends_on:
+      redis: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    deploy: { resources: { limits: { memory: 256M } } }
+
   web-api:
     <<: *svc-common
     build: { context: ., dockerfile: apps/web-api/Dockerfile, target: run }

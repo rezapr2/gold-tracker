@@ -18,14 +18,17 @@ describe('IngestController', () => {
   };
 
   let price: { ingestPrice: jest.Mock };
-  let settings: { alertThreshold: jest.Mock };
+  let settings: { alertThreshold: jest.Mock; isAssetEnabled: jest.Mock };
   let events: { emit: jest.Mock };
   let redis: { isAvailable: jest.Mock; get: jest.Mock; set: jest.Mock };
   let controller: IngestController;
 
   beforeEach(() => {
     price = { ingestPrice: jest.fn() };
-    settings = { alertThreshold: jest.fn().mockResolvedValue(1.5) };
+    settings = {
+      alertThreshold: jest.fn().mockResolvedValue(1.5),
+      isAssetEnabled: jest.fn().mockResolvedValue(true),
+    };
     events = { emit: jest.fn() };
     redis = { isAvailable: () => true, get: jest.fn(), set: jest.fn() } as any;
     controller = new IngestController(price as any, settings as any, events as any, redis as any);

@@ -106,6 +106,21 @@ services:
       rabbitmq: { condition: service_healthy }
     networks: [gold-network]
 
+  fetcher-oil:
+    build: { context: ., dockerfile: apps/fetcher-oil/Dockerfile }
+    container_name: gold-tracker-fetcher-oil
+    restart: unless-stopped
+    env_file: [.env]
+    environment:
+      <<: *rabbit-env
+      NODE_ENV: development
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    depends_on:
+      redis: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    networks: [gold-network]
+
   web-api:
     build: { context: ., dockerfile: apps/web-api/Dockerfile }
     container_name: gold-tracker-web-api
